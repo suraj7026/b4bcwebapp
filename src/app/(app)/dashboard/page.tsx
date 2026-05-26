@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { client } from "@/lib/api/client";
+import { createClient } from "@/utils/supabase/client";
+import {
+  fetchFavorites,
+  fetchIndustries,
+  fetchMembers,
+} from "@/lib/supabase-queries";
 import { Card, CardBody } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
@@ -22,35 +27,47 @@ const ICONS = [
 ];
 
 export default function DashboardPage() {
-  const meQ = useQuery({ queryKey: ["me"], queryFn: () => client.me() });
+  const sb = useMemo(() => createClient(), []);
+
+  const userQ = useQuery({
+    queryKey: ["me"],
+    queryFn: async () => (await sb.auth.getUser()).data.user,
+  });
+  const userId = userQ.data?.id ?? null;
+
   const industriesQ = useQuery({
     queryKey: ["industries"],
-    queryFn: () => client.industries(),
+    queryFn: () => fetchIndustries(sb),
+    staleTime: 5 * 60_000,
   });
   const membersQ = useQuery({
-    queryKey: ["members", { limit: 1 }],
-    queryFn: () => client.members({ limit: 1 }),
+    queryKey: ["members-count"],
+    queryFn: () => fetchMembers(sb, { pageSize: 1, page: 0 }),
   });
   const favoritesQ = useQuery({
-    queryKey: ["favorites"],
-    queryFn: () => client.favorites(),
+    queryKey: ["favorites", userId],
+    queryFn: () => (userId ? fetchFavorites(sb, userId) : []),
+    enabled: !!userId,
   });
 
-  const totals = useMemo(() => {
-    const indCount = industriesQ.data?.items.length ?? 0;
-    const memberCount = membersQ.data?.total ?? 0;
-    const favoritesCount = favoritesQ.data?.items.length ?? 0;
-    return { indCount, memberCount, favoritesCount };
-  }, [industriesQ.data, membersQ.data, favoritesQ.data]);
-
-  const industries = industriesQ.data?.items ?? [];
+  const totals = {
+    indCount: industriesQ.data?.length ?? 0,
+    memberCount: membersQ.data?.total ?? 0,
+    favoritesCount: favoritesQ.data?.length ?? 0,
+  };
+  const industries = industriesQ.data ?? [];
+  const displayName =
+    (userQ.data?.user_metadata as { full_name?: string } | undefined)
+      ?.full_name ||
+    userQ.data?.email?.split("@")[0] ||
+    "B4BC operator";
 
   return (
     <main className="mx-auto max-w-[1200px] px-5 py-10">
       <header className="mb-8 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-sm text-on-surface-variant">
-            Welcome, {meQ.data?.displayName ?? "B4BC operator"}
+            Welcome, {displayName}
           </p>
           <h1 className="text-4xl font-bold tracking-tight">
             Industries Dashboard
@@ -115,12 +132,15 @@ export default function DashboardPage() {
             : industries.map((ind, idx) => (
                 <Link
                   key={ind.id}
-                  href={{ pathname: "/directory", query: { industry: ind.id } }}
+                  href={{
+                    pathname: "/directory",
+                    query: { industry: String(ind.id) },
+                  }}
                   className="group rounded-xl border border-outline-variant bg-surface-container-lowest p-6 shadow-card transition-transform hover:-translate-y-0.5"
                 >
                   <div
                     className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg text-on-primary"
-                    style={{ backgroundColor: ind.accentColor }}
+                    style={{ backgroundColor: ind.accent_color }}
                   >
                     <Icon
                       name={ICONS[idx % ICONS.length]}
@@ -132,10 +152,6 @@ export default function DashboardPage() {
                   </h3>
                   <p className="mt-1 line-clamp-2 text-sm text-on-surface-variant">
                     {ind.description || "B4BC industry segment"}
-                  </p>
-                  <p className="mt-3 text-xs font-medium uppercase tracking-wide text-outline">
-                    {ind.memberCount} member
-                    {ind.memberCount === 1 ? "" : "s"}
                   </p>
                 </Link>
               ))}

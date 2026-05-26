@@ -1,13 +1,19 @@
 "use client";
 
-import { useMemo, useState, use } from "react";
+import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { client } from "@/lib/api/client";
+import { createClient } from "@/utils/supabase/client";
+import {
+  fetchFavoriteIds,
+  fetchIndustries,
+  fetchMember,
+  toggleFavorite,
+} from "@/lib/supabase-queries";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Card, CardBody, Chip } from "@/components/ui/card";
@@ -20,32 +26,40 @@ export default function MemberDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const sb = useMemo(() => createClient(), []);
   const qc = useQueryClient();
   const [reportOpen, setReportOpen] = useState(false);
 
-  const memberQ = useQuery({
-    queryKey: ["members", id],
-    queryFn: () => client.member(id),
+  const userQ = useQuery({
+    queryKey: ["me"],
+    queryFn: async () => (await sb.auth.getUser()).data.user,
   });
-  const favoritesQ = useQuery({
-    queryKey: ["favorites"],
-    queryFn: () => client.favorites(),
+  const userId = userQ.data?.id ?? null;
+
+  const memberQ = useQuery({
+    queryKey: ["member", id],
+    queryFn: () => fetchMember(sb, id),
   });
   const industriesQ = useQuery({
     queryKey: ["industries"],
-    queryFn: () => client.industries(),
+    queryFn: () => fetchIndustries(sb),
     staleTime: 5 * 60_000,
   });
+  const favIdsQ = useQuery({
+    queryKey: ["favorite-ids", userId],
+    queryFn: () => (userId ? fetchFavoriteIds(sb, userId) : new Set<string>()),
+    enabled: !!userId,
+  });
 
-  const isFavorite = useMemo(
-    () => !!favoritesQ.data?.items.find((m) => m.id === id),
-    [favoritesQ.data, id]
-  );
+  const isFavorite = favIdsQ.data?.has(id) ?? false;
 
   const toggleFav = useMutation({
-    mutationFn: () =>
-      isFavorite ? client.removeFavorite(id) : client.addFavorite(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["favorites"] }),
+    mutationFn: async () => {
+      if (!userId) throw new Error("Not signed in");
+      await toggleFavorite(sb, userId, id, isFavorite);
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["favorite-ids", userId] }),
   });
 
   if (memberQ.isLoading) {
@@ -74,8 +88,9 @@ export default function MemberDetailPage({
   }
 
   const m = memberQ.data;
-  const industry = industriesQ.data?.items.find((i) => i.id === m.industryId);
-  const title = m.companyName || m.contactName || "Untitled";
+  const industry =
+    industriesQ.data?.find((i) => i.id === m.industry_id) ?? null;
+  const title = m.company_name || m.contact_name || "Untitled";
 
   return (
     <main className="mx-auto max-w-[1100px] px-5 py-10">
@@ -91,10 +106,10 @@ export default function MemberDetailPage({
           <CardBody className="space-y-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               <Logo
-                src={m.logoUrl}
+                src={m.logo_url}
                 label={title}
                 size={80}
-                accent={industry?.accentColor}
+                accent={industry?.accent_color ?? m.industry_accent_color ?? undefined}
               />
               <div className="flex-1">
                 <div className="flex items-start justify-between gap-2">
@@ -103,8 +118,8 @@ export default function MemberDetailPage({
                       {title}
                     </h1>
                     <p className="mt-1 text-sm text-on-surface-variant">
-                      {industry?.name ?? "B4BC Member"}
-                      {m.zone ? ` • ${m.zone} zone` : ""}
+                      {industry?.name ?? m.industry_name ?? "B4BC Member"}
+                      {m.zone_name ? ` • ${m.zone_name} zone` : ""}
                     </p>
                   </div>
                   <Icon
@@ -140,11 +155,10 @@ export default function MemberDetailPage({
               <h2 className="text-lg font-semibold">Location</h2>
               <div className="mt-2 rounded-lg border border-outline-variant bg-surface-container-low p-4 text-sm">
                 <p className="font-medium">
-                  {m.address.line1 || "Address not provided"}
+                  {m.address_line1 || "Address not provided"}
                 </p>
                 <p className="text-on-surface-variant">
-                  {[m.address.city, m.address.state].filter(Boolean).join(", ") ||
-                    "—"}
+                  {[m.city, m.state].filter(Boolean).join(", ") || "—"}
                 </p>
               </div>
             </section>
@@ -188,7 +202,7 @@ export default function MemberDetailPage({
                   <Icon name="badge" className="text-primary" />
                   <div>
                     <p className="text-xs text-on-surface-variant">Contact</p>
-                    <p className="font-medium">{m.contactName || "—"}</p>
+                    <p className="font-medium">{m.contact_name || "—"}</p>
                   </div>
                 </li>
                 <li className="flex items-center gap-3 py-2">
@@ -202,7 +216,7 @@ export default function MemberDetailPage({
                   <Icon name="public" className="text-primary" />
                   <div>
                     <p className="text-xs text-on-surface-variant">Zone</p>
-                    <p className="font-medium">{m.zone || "—"}</p>
+                    <p className="font-medium">{m.zone_name || "—"}</p>
                   </div>
                 </li>
               </ul>
@@ -217,7 +231,11 @@ export default function MemberDetailPage({
                 onClick={() => toggleFav.mutate()}
                 loading={toggleFav.isPending}
               >
-                <Icon name="bookmark" filled={isFavorite} className="text-base" />
+                <Icon
+                  name="bookmark"
+                  filled={isFavorite}
+                  className="text-base"
+                />
                 {isFavorite ? "Saved to favorites" : "Save to favorites"}
               </Button>
               <Button

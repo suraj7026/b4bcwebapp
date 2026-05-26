@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation";
-import { readSession } from "@/lib/session";
+import { createClient } from "@/utils/supabase/server";
+
+export const dynamic = "force-dynamic";
 
 export default async function Index() {
-  const session = await readSession();
-  redirect(session ? "/directory" : "/login");
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  redirect(user ? "/directory" : "/login");
 }

@@ -1,20 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { client, ApiError } from "@/lib/api/client";
+import { useMemo, useState } from "react";
+import { createClient } from "@/utils/supabase/client";
 import { Card, CardBody } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { formatDate } from "@/lib/utils";
 
 export default function PrivacyPage() {
+  const sb = useMemo(() => createClient(), []);
   const [exportInfo, setExportInfo] = useState<{
-    downloadUrl: string;
-    expiresAt: string;
+    download_url: string | null;
+    expires_at: string | null;
   } | null>(null);
   const [deletionInfo, setDeletionInfo] = useState<{
     status: string;
-    deletionAfter: string;
+    deletion_after: string;
   } | null>(null);
   const [busy, setBusy] = useState<"export" | "delete" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -24,12 +25,27 @@ export default function PrivacyPage() {
     setBusy("export");
     setError(null);
     try {
-      const res = await client.exportOwnData();
-      setExportInfo(res);
-    } catch (err) {
+      const { data: u } = await sb.auth.getUser();
+      if (!u.user) throw new Error("Not signed in");
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      const { data, error: e } = await sb
+        .from("user_exports")
+        .insert({
+          user_id: u.user.id,
+          download_url: null,
+          expires_at: expiresAt,
+        })
+        .select()
+        .single();
+      if (e) throw e;
+      setExportInfo({
+        download_url: data.download_url,
+        expires_at: data.expires_at,
+      });
+    } catch (err: unknown) {
       setError(
-        err instanceof ApiError
-          ? err.body.message ?? "Export failed."
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message: string }).message)
           : "Export failed."
       );
     } finally {
@@ -41,12 +57,29 @@ export default function PrivacyPage() {
     setBusy("delete");
     setError(null);
     try {
-      const res = await client.deleteOwnAccount();
-      setDeletionInfo(res);
-    } catch (err) {
+      const { data: u } = await sb.auth.getUser();
+      if (!u.user) throw new Error("Not signed in");
+      const deletionAfter = new Date(
+        Date.now() + 30 * 24 * 60 * 60 * 1000
+      ).toISOString();
+      const { data, error: e } = await sb
+        .from("user_deletion_requests")
+        .upsert({
+          user_id: u.user.id,
+          deletion_after: deletionAfter,
+          status: "scheduled",
+        })
+        .select()
+        .single();
+      if (e) throw e;
+      setDeletionInfo({
+        status: data.status,
+        deletion_after: data.deletion_after,
+      });
+    } catch (err: unknown) {
       setError(
-        err instanceof ApiError
-          ? err.body.message ?? "Could not schedule deletion."
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message: string }).message)
           : "Could not schedule deletion."
       );
     } finally {
@@ -68,8 +101,8 @@ export default function PrivacyPage() {
         <CardBody className="space-y-3">
           <h2 className="text-lg font-semibold">Export your data</h2>
           <p className="text-sm text-on-surface-variant">
-            We'll generate a JSON export of your account and activity. The
-            download link expires after an hour.
+            We'll queue a JSON export of your account and activity. The
+            download link will be emailed when ready and expires in an hour.
           </p>
           <div>
             <Button
@@ -83,16 +116,9 @@ export default function PrivacyPage() {
           </div>
           {exportInfo ? (
             <div className="mt-2 rounded-lg border border-outline-variant bg-surface-container-low p-4 text-sm">
-              <p>
-                <a
-                  className="text-primary underline"
-                  href={exportInfo.downloadUrl}
-                >
-                  Download my data
-                </a>
-              </p>
+              <p>Export queued.</p>
               <p className="mt-1 text-xs text-on-surface-variant">
-                Link expires {formatDate(exportInfo.expiresAt)}.
+                Link will be valid until {formatDate(exportInfo.expires_at)}.
               </p>
             </div>
           ) : null}
@@ -103,22 +129,21 @@ export default function PrivacyPage() {
         <CardBody className="space-y-3">
           <h2 className="text-lg font-semibold text-error">Delete account</h2>
           <p className="text-sm text-on-surface-variant">
-            Deletion is scheduled for 30 days after the request. You can sign in
-            and contact support before that to cancel.
+            Deletion is scheduled for 30 days after the request. You can sign
+            in and contact support before that to cancel.
           </p>
           {deletionInfo ? (
             <div className="rounded-lg border border-error/30 bg-error-container/40 p-4 text-sm text-on-error-container">
               <p className="font-semibold">Deletion scheduled.</p>
               <p>
                 Your account will be removed after{" "}
-                {formatDate(deletionInfo.deletionAfter)}.
+                {formatDate(deletionInfo.deletion_after)}.
               </p>
             </div>
           ) : confirming ? (
             <div className="space-y-3 rounded-lg border border-error/30 bg-error-container/30 p-4">
               <p className="text-sm">
-                This will schedule your account for deletion. Type{" "}
-                <span className="font-semibold">delete</span> below and confirm.
+                This will schedule your account for deletion.
               </p>
               <div className="flex justify-end gap-2">
                 <Button variant="ghost" onClick={() => setConfirming(false)}>

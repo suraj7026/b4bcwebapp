@@ -5,8 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/ui/icon";
-import { client } from "@/lib/api/client";
-import type { ApiUser } from "@/lib/api/types";
+import { createClient } from "@/utils/supabase/client";
+import type { SessionUser } from "@/lib/auth";
 
 const NAV = [
   { label: "Dashboard", href: "/dashboard", icon: "space_dashboard" },
@@ -15,13 +15,14 @@ const NAV = [
   { label: "Profile", href: "/profile", icon: "account_circle" },
 ];
 
-export function TopBar({ user }: { user: ApiUser }) {
+export function TopBar({ user }: { user: SessionUser }) {
   const pathname = usePathname();
   const router = useRouter();
+  const supabase = createClient();
   const [menuOpen, setMenuOpen] = useState(false);
 
   async function onLogout() {
-    await client.logout();
+    await supabase.auth.signOut();
     router.replace("/login");
     router.refresh();
   }

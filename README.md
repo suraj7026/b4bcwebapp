@@ -1,81 +1,130 @@
 # B4BC Connect — Business Directory Webapp
 
-Next.js 16 (App Router, TypeScript, Tailwind v4) frontend for the B4BC
-business directory. Talks to the Django REST API at `../b4bc_api` (mounted at
-`/v1/*`) through a server-side BFF layer that keeps the JWT pair in an
-encrypted, http-only cookie.
+Next.js 16 + Supabase webapp for the B4BC business directory. No separate
+backend — the Next.js app talks straight to Supabase (Postgres + Auth +
+Row-Level Security) using the publishable key on the client and the
+service-role secret in scripts.
 
 ## Stack
 - **Framework**: Next.js 16 (App Router, React 19, Turbopack)
-- **Styling**: Tailwind CSS v4 + custom design tokens from the Stitch
-  "B4BC Connect Business Directory" project (Executive Minimalist palette,
-  `#003ec7` primary, Inter typography, Material Symbols icons)
+- **Backend**: Supabase (Postgres + Auth + RLS + Storage)
+- **Auth**: Email + password through Supabase Auth; admin / zone-user /
+  member roles encoded in `app_metadata`
 - **State**: TanStack Query v5
-- **Validation**: Zod
-- **Session**: JOSE-signed http-only cookie (`b4bc_session`) holding the
-  access/refresh token pair from `/v1/auth/login`
+- **Styling**: Tailwind CSS v4, design tokens from the Stitch "B4BC Connect
+  Business Directory" project (Inter, `#003ec7` primary, Material Symbols)
+
+## Architecture
+```
+[ Browser ] ──► b4bcwebapp (Next.js on Vercel)
+                  │ @supabase/supabase-js
+                  ▼
+            Supabase project
+            ├─ Postgres  (industries, zones, members, favorites, reports, …)
+            ├─ Auth      (admin / zone_user / member)
+            ├─ Storage   (optional — currently linking external logos)
+            └─ RLS       (admin → all, zone_user → own zone, member → self)
+```
 
 ## Routes
-- `/login` — operator sign-in (admin or zone user, e.g. `b4bc_admin`,
-  `b4bc_west`).
-- `/dashboard` — industries dashboard, totals + grid of industry segments.
-- `/directory` — searchable, paginated business directory with industry, zone
-  and sort filters; featured first card.
+- `/login` — Supabase email/password + magic-link sign-in.
+- `/dashboard` — totals + industry tiles.
+- `/directory` — paginated, searchable directory with industry/zone/sort
+  filters; `keepPreviousData` for smooth refetches; pagination via offset.
 - `/directory/[id]` — full business profile, contact actions, favorite +
   report flows.
 - `/favorites` — saved members.
-- `/profile` — current user info; if signed in as a `member`, full
-  `PATCH /v1/members/me` form.
-- `/privacy` — data export + scheduled account deletion (GDPR).
+- `/profile` — current user info; for `role=member`, an inline edit form on
+  the linked `members` row.
+- `/privacy` — schedule deletion + request export.
 
-## API mapping (Django `b4bc_api` → BFF → client)
-| Django endpoint                   | BFF route                          |
-| --------------------------------- | ---------------------------------- |
-| `POST /v1/auth/login`             | `POST /api/bff/login`              |
-| `POST /v1/auth/logout`            | `POST /api/bff/logout`             |
-| `POST /v1/auth/refresh`           | (internal — auto on 401)           |
-| `GET  /v1/auth/me`                | `GET  /api/bff/me`                 |
-| `GET  /v1/industries`             | `GET  /api/bff/industries`         |
-| `GET  /v1/zones`                  | `GET  /api/bff/zones`              |
-| `GET  /v1/members`                | `GET  /api/bff/members`            |
-| `GET  /v1/members/<id>`           | `GET  /api/bff/members/[id]`       |
-| `PATCH /v1/members/me`            | `PATCH /api/bff/members/me`        |
-| `GET  /v1/favorites`              | `GET  /api/bff/favorites`          |
-| `PUT/DELETE /v1/favorites/<id>`   | `PUT/DELETE /api/bff/favorites/[id]` |
-| `POST /v1/members/<id>/report`    | `POST /api/bff/members/[id]/report` |
-| `GET  /v1/users/me/export`        | `GET  /api/bff/privacy/export`     |
-| `DELETE /v1/users/me`             | `DELETE /api/bff/privacy/delete`   |
+## Supabase
 
-## Running locally
+### Schema
+SQL lives in [`supabase/migrations/`](supabase/migrations). Apply with:
 ```bash
-# 1. Start the Django API at http://localhost:8000
-cd ../b4bc_api && python manage.py runserver 0.0.0.0:8000
+psql "$LEGACY_DATABASE_URL" -f supabase/migrations/20260526120000_init.sql
+psql "$LEGACY_DATABASE_URL" -f supabase/migrations/20260526120100_rls.sql
+```
+…or paste them into the Supabase SQL editor in the dashboard.
 
-# 2. Configure the webapp
+Tables (all under `public`):
+- `industries`, `zones` — reference data.
+- `members` — primary business listing. `user_id` FKs to `auth.users` so a
+  member account can edit its own row.
+- `favorites` — `(user_id, member_id)` bookmarks.
+- `reports` — moderation queue.
+- `user_deletion_requests`, `user_exports` — GDPR-ish actions.
+
+Plus a `directory_members` view that denormalises industry + zone for cheap
+read-side joins.
+
+### RLS
+Roles + zone live in `auth.users.app_metadata`:
+```jsonc
+{ "role": "admin" }                       // sees everything
+{ "role": "zone_user", "zone": "WEST" }   // sees only WEST members
+{ "role": "member" }                      // sees all active members; edits own row
+```
+Policies in [`20260526120100_rls.sql`](supabase/migrations/20260526120100_rls.sql).
+
+### Migration from the old Django Postgres
+[`scripts/migrate-from-legacy.ts`](scripts/migrate-from-legacy.ts) reads from
+the legacy `b4b_members` / `b4b_industry_segments` tables and:
+1. Upserts industries (creates 1 row per unique `segment_name`).
+2. Upserts `public.zones` (idempotent).
+3. Upserts `public.members` keyed by `legacy_member_id` (re-runs safely).
+4. Creates a Supabase Auth user for every member with a valid email and
+   captures a recovery link in `scripts/output/member-reset-links.csv`.
+5. Creates the admin + zone-operator accounts
+   (`admin@b4bc.org`, `west@b4bc.org`, etc.) with `app_metadata` set and
+   logs their recovery links to `scripts/output/operator-reset-links.csv`.
+6. Anything we couldn't migrate ends up in `scripts/output/skipped.csv`.
+
+Run it:
+```bash
+# In .env.local:
+# NEXT_PUBLIC_SUPABASE_URL=...
+# SUPABASE_SECRET_KEY=...           ← the service_role key
+# LEGACY_DATABASE_URL=postgres://... (the old b4bc_api DB)
+
+npx tsx scripts/migrate-from-legacy.ts
+```
+
+## Local development
+```bash
 cp .env.example .env.local
-# Edit NEXT_PUBLIC_API_BASE_URL and SESSION_SECRET (32+ random bytes)
-
-# 3. Install + start
+# Fill in NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 npm install
 npm run dev
 ```
 
-Open http://localhost:3000 and sign in with operator credentials configured
-on the Django side (e.g. `b4bc_admin` / `@Admin2026` when the matching
-`B4BC_ADMIN_USERNAME` and `B4BC_ADMIN_PASSWORD_HASH` envs are set).
+Open http://localhost:3000 and sign in with any auth user you've created.
 
-## Layout
+## Deploying to Vercel
+1. Import `suraj7026/b4bcwebapp` into Vercel.
+2. Add three environment variables to **Production + Preview + Development**:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+   - `NEXT_PUBLIC_MEDIA_BASE_URL` (default `https://b4bc.org/people/`)
+3. (Optional, server-only) `SUPABASE_SECRET_KEY` for any server actions or
+   API routes that need to bypass RLS. **Don't** prefix with `NEXT_PUBLIC_`.
+4. Deploy.
+
+No backend host, no Postgres procurement, no CORS gymnastics. Supabase
+covers all three.
+
+## Project layout
 ```
 src/
   app/
-    (app)/                 # Authed shell with TopBar
+    (app)/                 # Authed shell
       dashboard/
       directory/
         [id]/
       favorites/
       profile/
       privacy/
-    api/bff/               # Server-only BFF routes
     login/
     layout.tsx
     page.tsx               # Redirects to /login or /directory
@@ -86,25 +135,27 @@ src/
       business-card.tsx
       filters-panel.tsx
       report-dialog.tsx
+      logo.tsx
     ui/                    # Button, Input, Card, Chip, Icon
     providers.tsx          # TanStack Query
   lib/
-    api/
-      types.ts             # Shared TS types for the API
-      server.ts            # Server-only API client + token refresh
-      client.ts            # Client-only wrapper that talks to BFF
-    session.ts             # JWT-signed cookie session
-    env.ts
+    auth.ts                # getSessionUser() server helper
+    media.ts               # resolveLogoUrl()
+    supabase-queries.ts    # typed queries used by the pages
     utils.ts
-  middleware.ts            # Redirects unauthenticated traffic to /login
-```
+  middleware.ts            # Wraps utils/supabase/middleware.updateSession
+  types/database.ts        # Hand-written Database type for the JS client
+  utils/supabase/
+    server.ts              # createClient() for RSC / route handlers
+    client.ts              # createClient() for "use client"
+    middleware.ts          # session refresher
 
-## Notes
-- The `(app)` group enforces auth via the layout; `middleware.ts` does the
-  unauthenticated → `/login` redirect for fast bounce.
-- The session cookie carries the refresh token plus the user identity. When
-  the access token has <30s left, the BFF transparently rotates it via
-  `/v1/auth/refresh`. A 401 from the API triggers a single retry through the
-  same rotation path.
-- All write actions (favorites, profile patch, reports, privacy actions)
-  call the API through the BFF so the JWT never leaves the server.
+supabase/
+  config.toml
+  migrations/
+    20260526120000_init.sql
+    20260526120100_rls.sql
+
+scripts/
+  migrate-from-legacy.ts
+```

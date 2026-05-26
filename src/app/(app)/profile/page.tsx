@@ -1,26 +1,60 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { client, ApiError } from "@/lib/api/client";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createClient } from "@/utils/supabase/client";
+import { fetchOwnMember } from "@/lib/supabase-queries";
 import { Card, CardBody } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Icon } from "@/components/ui/icon";
-import type { MemberPatchPayload } from "@/lib/api/types";
+import type { Member } from "@/types/database";
+
+type EditableMember = Pick<
+  Member,
+  | "company_name"
+  | "contact_name"
+  | "email"
+  | "phone"
+  | "description"
+  | "services"
+  | "city"
+  | "state"
+  | "address_line1"
+>;
+
+const empty: EditableMember = {
+  company_name: "",
+  contact_name: "",
+  email: "",
+  phone: "",
+  description: "",
+  services: [],
+  city: "",
+  state: "",
+  address_line1: "",
+};
 
 export default function ProfilePage() {
+  const sb = useMemo(() => createClient(), []);
   const qc = useQueryClient();
-  const meQ = useQuery({ queryKey: ["me"], queryFn: () => client.me() });
-  const memberId = meQ.data?.memberId;
+
+  const userQ = useQuery({
+    queryKey: ["me"],
+    queryFn: async () => (await sb.auth.getUser()).data.user,
+  });
+  const userId = userQ.data?.id ?? null;
+  const role =
+    (userQ.data?.app_metadata as { role?: string } | undefined)?.role ??
+    "member";
 
   const memberQ = useQuery({
-    enabled: !!memberId,
-    queryKey: ["members", memberId],
-    queryFn: () => client.member(memberId as string),
+    queryKey: ["own-member", userId],
+    queryFn: () => (userId ? fetchOwnMember(sb, userId) : null),
+    enabled: !!userId,
   });
 
-  const [form, setForm] = useState<MemberPatchPayload>({});
+  const [form, setForm] = useState<EditableMember>(empty);
   const [services, setServices] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -28,36 +62,44 @@ export default function ProfilePage() {
   useEffect(() => {
     if (memberQ.data) {
       setForm({
-        companyName: memberQ.data.companyName ?? "",
-        contactName: memberQ.data.contactName ?? "",
+        company_name: memberQ.data.company_name ?? "",
+        contact_name: memberQ.data.contact_name ?? "",
         email: memberQ.data.email ?? "",
         phone: memberQ.data.phone ?? "",
         description: memberQ.data.description ?? "",
-        address: {
-          line1: memberQ.data.address.line1,
-          city: memberQ.data.address.city,
-          state: memberQ.data.address.state,
-        },
+        services: memberQ.data.services ?? [],
+        city: memberQ.data.city ?? "",
+        state: memberQ.data.state ?? "",
+        address_line1: memberQ.data.address_line1 ?? "",
       });
-      setServices(memberQ.data.services.join(", "));
+      setServices((memberQ.data.services ?? []).join(", "));
     }
   }, [memberQ.data]);
 
   const save = useMutation({
-    mutationFn: (payload: MemberPatchPayload) => client.patchSelf(payload),
-    onSuccess: (data) => {
-      qc.setQueryData(["members", memberId], data);
+    mutationFn: async (payload: EditableMember) => {
+      if (!memberQ.data) throw new Error("No member row to update");
+      const { error: e } = await sb
+        .from("members")
+        .update(payload)
+        .eq("id", memberQ.data.id);
+      if (e) throw e;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["own-member", userId] });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     },
-    onError: (err) => {
-      if (err instanceof ApiError)
-        setError(err.body.message || "Could not save changes.");
-      else setError("Could not save changes.");
+    onError: (err: unknown) => {
+      const message =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message: string }).message)
+          : "Could not save changes.";
+      setError(message);
     },
   });
 
-  const isMember = meQ.data?.role === "member" && !!memberId;
+  const isMember = role === "member" && !!memberQ.data;
 
   return (
     <main className="mx-auto max-w-[900px] px-5 py-10">
@@ -73,26 +115,24 @@ export default function ProfilePage() {
           <h2 className="text-lg font-semibold">Account</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
-              label="Username"
-              value={meQ.data?.username ?? ""}
+              label="Email"
+              value={userQ.data?.email ?? ""}
               disabled
               readOnly
             />
-            <Input
-              label="Display name"
-              value={meQ.data?.displayName ?? ""}
-              disabled
-              readOnly
-            />
-            <Input
-              label="Role"
-              value={meQ.data?.role ?? ""}
-              disabled
-              readOnly
-            />
+            <Input label="Role" value={role} disabled readOnly />
             <Input
               label="Zone"
-              value={meQ.data?.zone ?? "—"}
+              value={
+                (userQ.data?.app_metadata as { zone?: string } | undefined)
+                  ?.zone ?? "—"
+              }
+              disabled
+              readOnly
+            />
+            <Input
+              label="User ID"
+              value={userQ.data?.id ?? ""}
               disabled
               readOnly
             />
@@ -116,16 +156,16 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input
                 label="Company name"
-                value={form.companyName ?? ""}
+                value={form.company_name ?? ""}
                 onChange={(e) =>
-                  setForm({ ...form, companyName: e.target.value })
+                  setForm({ ...form, company_name: e.target.value })
                 }
               />
               <Input
                 label="Contact name"
-                value={form.contactName ?? ""}
+                value={form.contact_name ?? ""}
                 onChange={(e) =>
-                  setForm({ ...form, contactName: e.target.value })
+                  setForm({ ...form, contact_name: e.target.value })
                 }
               />
               <Input
@@ -162,33 +202,20 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Input
                 label="Address"
-                value={form.address?.line1 ?? ""}
+                value={form.address_line1 ?? ""}
                 onChange={(e) =>
-                  setForm({
-                    ...form,
-                    address: { ...form.address, line1: e.target.value },
-                  })
+                  setForm({ ...form, address_line1: e.target.value })
                 }
               />
               <Input
                 label="City"
-                value={form.address?.city ?? ""}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    address: { ...form.address, city: e.target.value },
-                  })
-                }
+                value={form.city ?? ""}
+                onChange={(e) => setForm({ ...form, city: e.target.value })}
               />
               <Input
                 label="State"
-                value={form.address?.state ?? ""}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    address: { ...form.address, state: e.target.value },
-                  })
-                }
+                value={form.state ?? ""}
+                onChange={(e) => setForm({ ...form, state: e.target.value })}
               />
             </div>
 
@@ -200,18 +227,17 @@ export default function ProfilePage() {
                 onClick={() => {
                   if (memberQ.data) {
                     setForm({
-                      companyName: memberQ.data.companyName ?? "",
-                      contactName: memberQ.data.contactName ?? "",
+                      company_name: memberQ.data.company_name ?? "",
+                      contact_name: memberQ.data.contact_name ?? "",
                       email: memberQ.data.email ?? "",
                       phone: memberQ.data.phone ?? "",
                       description: memberQ.data.description ?? "",
-                      address: {
-                        line1: memberQ.data.address.line1,
-                        city: memberQ.data.address.city,
-                        state: memberQ.data.address.state,
-                      },
+                      services: memberQ.data.services ?? [],
+                      city: memberQ.data.city ?? "",
+                      state: memberQ.data.state ?? "",
+                      address_line1: memberQ.data.address_line1 ?? "",
                     });
-                    setServices(memberQ.data.services.join(", "));
+                    setServices((memberQ.data.services ?? []).join(", "));
                   }
                 }}
               >
@@ -228,7 +254,7 @@ export default function ProfilePage() {
                           .split(",")
                           .map((s) => s.trim())
                           .filter(Boolean)
-                      : undefined,
+                      : [],
                   });
                 }}
               >
@@ -241,8 +267,8 @@ export default function ProfilePage() {
         <Card className="mt-6">
           <CardBody className="text-sm text-on-surface-variant">
             <p>
-              You're signed in as a {meQ.data?.role.replace("_", " ")}. Member
-              listings can only be edited by the owning member account.
+              You're signed in as a {role.replace("_", " ")}. Member listings
+              can only be edited by the owning member account.
             </p>
           </CardBody>
         </Card>

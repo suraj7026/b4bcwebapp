@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Icon } from "@/components/ui/icon";
-import { client, ApiError } from "@/lib/api/client";
+import { createClient } from "@/utils/supabase/client";
+import { submitReport } from "@/lib/supabase-queries";
 
 const REASONS = [
   "Inaccurate information",
@@ -23,6 +24,7 @@ export function ReportDialog({
   onClose: () => void;
   memberId: string;
 }) {
+  const sb = useMemo(() => createClient(), []);
   const [reason, setReason] = useState(REASONS[0]);
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -36,12 +38,16 @@ export function ReportDialog({
     setSubmitting(true);
     setError(null);
     try {
-      await client.reportMember(memberId, { reason, note: note || undefined });
+      const { data } = await sb.auth.getUser();
+      if (!data.user) throw new Error("Not signed in");
+      await submitReport(sb, memberId, data.user.id, reason, note || undefined);
       setDone(true);
-    } catch (err) {
-      if (err instanceof ApiError)
-        setError(err.body.message || "Could not submit the report.");
-      else setError("Could not submit the report.");
+    } catch (err: unknown) {
+      const message =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message: string }).message)
+          : "Could not submit the report.";
+      setError(message);
     } finally {
       setSubmitting(false);
     }
@@ -111,9 +117,7 @@ export function ReportDialog({
                 onChange={(e) => setNote(e.target.value)}
               />
 
-              {error ? (
-                <p className="text-sm text-error">{error}</p>
-              ) : null}
+              {error ? <p className="text-sm text-error">{error}</p> : null}
 
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="ghost" onClick={close}>

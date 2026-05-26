@@ -1,40 +1,61 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import {
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { client } from "@/lib/api/client";
+import { createClient } from "@/utils/supabase/client";
+import {
+  fetchFavorites,
+  fetchIndustries,
+  toggleFavorite,
+} from "@/lib/supabase-queries";
 import { BusinessCard } from "@/components/directory/business-card";
 import { Icon } from "@/components/ui/icon";
-import Link from "next/link";
+import type { Industry } from "@/types/database";
 
 export default function FavoritesPage() {
+  const sb = useMemo(() => createClient(), []);
   const qc = useQueryClient();
+
+  const userQ = useQuery({
+    queryKey: ["me"],
+    queryFn: async () => (await sb.auth.getUser()).data.user,
+  });
+  const userId = userQ.data?.id ?? null;
+
   const favoritesQ = useQuery({
-    queryKey: ["favorites"],
-    queryFn: () => client.favorites(),
+    queryKey: ["favorites", userId],
+    queryFn: () => (userId ? fetchFavorites(sb, userId) : []),
+    enabled: !!userId,
   });
   const industriesQ = useQuery({
     queryKey: ["industries"],
-    queryFn: () => client.industries(),
+    queryFn: () => fetchIndustries(sb),
     staleTime: 5 * 60_000,
   });
 
   const indById = useMemo(() => {
-    const map = new Map();
-    industriesQ.data?.items.forEach((i) => map.set(i.id, i));
+    const map = new Map<number, Industry>();
+    industriesQ.data?.forEach((i) => map.set(i.id, i));
     return map;
   }, [industriesQ.data]);
 
   const remove = useMutation({
-    mutationFn: (id: string) => client.removeFavorite(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["favorites"] }),
+    mutationFn: async (memberId: string) => {
+      if (!userId) return;
+      await toggleFavorite(sb, userId, memberId, true);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["favorites", userId] });
+      qc.invalidateQueries({ queryKey: ["favorite-ids", userId] });
+    },
   });
 
-  const items = favoritesQ.data?.items ?? [];
+  const items = favoritesQ.data ?? [];
 
   return (
     <main className="mx-auto max-w-[1200px] px-5 py-10">
@@ -75,7 +96,7 @@ export default function FavoritesPage() {
               key={biz.id}
               business={biz}
               industry={
-                biz.industryId ? indById.get(biz.industryId) ?? null : null
+                biz.industry_id ? indById.get(biz.industry_id) ?? null : null
               }
               isFavorite
               onToggleFavorite={(id) => remove.mutate(id)}

@@ -4,7 +4,17 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Icon } from "@/components/ui/icon";
-import type { Industry, Zone } from "@/lib/api/types";
+export interface FilterIndustry {
+  id: string;
+  name: string;
+  description?: string | null;
+  accentColor?: string;
+  memberCount?: number;
+}
+export interface FilterZone {
+  id: string;
+  name: string;
+}
 
 export interface DirectoryFiltersState {
   q: string;
@@ -22,8 +32,8 @@ export function FiltersPanel({
   count,
 }: {
   state: DirectoryFiltersState;
-  industries: Industry[];
-  zones: Zone[];
+  industries: FilterIndustry[];
+  zones: FilterZone[];
   onChange: (next: DirectoryFiltersState) => void;
   onClear: () => void;
   count?: number;

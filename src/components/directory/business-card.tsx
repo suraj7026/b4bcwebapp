@@ -5,7 +5,7 @@ import { Icon } from "@/components/ui/icon";
 import { Chip } from "@/components/ui/card";
 import { Logo } from "@/components/directory/logo";
 import { cn } from "@/lib/utils";
-import type { BusinessMember, Industry } from "@/lib/api/types";
+import type { DirectoryMember, Industry } from "@/types/database";
 
 export function BusinessCard({
   business,
@@ -14,14 +14,18 @@ export function BusinessCard({
   isFavorite,
   onToggleFavorite,
 }: {
-  business: BusinessMember;
+  business: DirectoryMember;
   featured?: boolean;
   industry?: Industry | null;
   isFavorite?: boolean;
   onToggleFavorite?: (id: string) => void;
 }) {
-  const title = business.companyName || business.contactName || "Untitled";
-  const subtitle = industry?.name ?? "B4BC Member";
+  const title = business.company_name || business.contact_name || "Untitled";
+  const subtitle =
+    industry?.name ?? business.industry_name ?? "B4BC Member";
+  const accent = industry?.accent_color ?? business.industry_accent_color ?? undefined;
+  const location =
+    business.zone_name || business.city || business.state || "—";
 
   return (
     <article
@@ -37,10 +41,10 @@ export function BusinessCard({
         )}
       >
         <Logo
-          src={business.logoUrl}
+          src={business.logo_url}
           label={title}
           size={56}
-          accent={industry?.accentColor}
+          accent={accent}
         />
         <div className="min-w-0">
           <h3 className="truncate text-base font-semibold text-on-surface">
@@ -68,7 +72,7 @@ export function BusinessCard({
         <div className="mt-auto flex items-center justify-between border-t border-outline-variant pt-4">
           <span className="flex items-center gap-1.5 text-xs text-on-surface-variant">
             <Icon name="location_on" className="text-sm" />
-            {business.zone || business.address.city || "—"}
+            {location}
           </span>
           <div className="flex items-center gap-2">
             {onToggleFavorite ? (

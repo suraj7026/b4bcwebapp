@@ -1,14 +1,21 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   keepPreviousData,
-  useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { client } from "@/lib/api/client";
+import { createClient } from "@/utils/supabase/client";
+import {
+  fetchFavoriteIds,
+  fetchIndustries,
+  fetchMembers,
+  fetchZones,
+  toggleFavorite,
+  type MemberListFilters,
+} from "@/lib/supabase-queries";
 import {
   FiltersPanel,
   type DirectoryFiltersState,
@@ -17,6 +24,7 @@ import { BusinessCard } from "@/components/directory/business-card";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
+import type { DirectoryMember, Industry } from "@/types/database";
 
 const DEFAULT_FILTERS: DirectoryFiltersState = {
   q: "",
@@ -35,85 +43,92 @@ function useDebounced<T>(value: T, ms = 300): T {
 }
 
 export default function DirectoryPage() {
+  const sb = useMemo(() => createClient(), []);
   const qc = useQueryClient();
   const [filters, setFilters] = useState<DirectoryFiltersState>(DEFAULT_FILTERS);
+  const [page, setPage] = useState(0);
   const debounced = useDebounced(filters, 300);
+
+  useEffect(() => {
+    setPage(0);
+  }, [debounced.q, debounced.industryId, debounced.zone, debounced.sort]);
+
+  const userQ = useQuery({
+    queryKey: ["me"],
+    queryFn: async () => (await sb.auth.getUser()).data.user,
+  });
+  const userId = userQ.data?.id ?? null;
 
   const industriesQ = useQuery({
     queryKey: ["industries"],
-    queryFn: () => client.industries(),
+    queryFn: () => fetchIndustries(sb),
     staleTime: 5 * 60_000,
   });
   const zonesQ = useQuery({
     queryKey: ["zones"],
-    queryFn: () => client.zones(),
+    queryFn: () => fetchZones(sb),
     staleTime: 5 * 60_000,
   });
-  const favoritesQ = useQuery({
-    queryKey: ["favorites"],
-    queryFn: () => client.favorites(),
+  const favIdsQ = useQuery({
+    queryKey: ["favorite-ids", userId],
+    queryFn: () => (userId ? fetchFavoriteIds(sb, userId) : new Set<string>()),
+    enabled: !!userId,
   });
 
-  const membersQ = useInfiniteQuery({
-    queryKey: ["members", debounced],
-    initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) =>
-      client.members({
-        q: debounced.q.trim() || undefined,
-        industryId: debounced.industryId ?? undefined,
-        zone: debounced.zone ?? undefined,
-        sort: debounced.sort,
-        cursor: pageParam,
-        limit: 20,
-      }),
-    getNextPageParam: (last) => last.nextCursor ?? undefined,
-    // Keep the previous query's data on screen while a new filter fetches.
-    // Without this, every keystroke briefly clears the grid → flashing skeleton.
+  const filtersForQuery: MemberListFilters = {
+    q: debounced.q.trim() || undefined,
+    industryId: debounced.industryId
+      ? parseInt(debounced.industryId, 10)
+      : undefined,
+    zoneId: debounced.zone ?? undefined,
+    sort: debounced.sort,
+    page,
+  };
+
+  const membersQ = useQuery({
+    queryKey: ["members", filtersForQuery],
+    queryFn: () => fetchMembers(sb, filtersForQuery),
     placeholderData: keepPreviousData,
   });
 
-  const favoriteIds = useMemo(
-    () => new Set(favoritesQ.data?.items.map((i) => i.id) ?? []),
-    [favoritesQ.data]
-  );
-
   const toggleFav = useMutation({
-    mutationFn: async (id: string) => {
-      if (favoriteIds.has(id)) await client.removeFavorite(id);
-      else await client.addFavorite(id);
+    mutationFn: async (m: DirectoryMember) => {
+      if (!userId) throw new Error("Not signed in");
+      const isFav = favIdsQ.data?.has(m.id) ?? false;
+      await toggleFavorite(sb, userId, m.id, isFav);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["favorites"] }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["favorite-ids", userId] }),
   });
 
-  const allItems = useMemo(() => {
-    const flat = membersQ.data?.pages.flatMap((p) => p.items) ?? [];
-    const seen = new Set<string>();
-    const out: typeof flat = [];
-    for (const item of flat) {
-      if (seen.has(item.id)) continue;
-      seen.add(item.id);
-      out.push(item);
-    }
-    return out;
-  }, [membersQ.data]);
-  const total = membersQ.data?.pages[0]?.total;
-  // True empty = we have a definite response AND it says 0. This overrules
-  // any stale `allItems` carried over by `placeholderData: keepPreviousData`
-  // during a filter refetch.
-  const isDefinitelyEmpty =
-    !membersQ.isPending && !membersQ.isPlaceholderData && total === 0;
-  const itemsToShow = isDefinitelyEmpty ? [] : allItems;
-  // Whether we're showing stale results while a new filter is loading.
-  const showingStale =
-    membersQ.isPlaceholderData || (membersQ.isFetching && !membersQ.isPending);
+  const total = membersQ.data?.total ?? 0;
+  const items = membersQ.data?.items ?? [];
+  const totalPages = Math.max(1, Math.ceil(total / 20));
+  const showingStale = membersQ.isPlaceholderData && membersQ.isFetching;
+  const isEmpty = !membersQ.isPending && items.length === 0;
 
   const industriesById = useMemo(() => {
-    const map = new Map<string, (typeof industries)[number]>();
-    industriesQ.data?.items.forEach((i) => map.set(i.id, i));
+    const map = new Map<number, Industry>();
+    industriesQ.data?.forEach((i) => map.set(i.id, i));
     return map;
   }, [industriesQ.data]);
 
-  const industries = industriesQ.data?.items ?? [];
+  // FiltersPanel still keys industry by id-string (legacy from prefixed ids).
+  const industriesForPanel = useMemo(
+    () =>
+      (industriesQ.data ?? []).map((i) => ({
+        id: String(i.id),
+        name: i.name,
+        description: i.description,
+        accentColor: i.accent_color,
+        memberCount: 0,
+      })),
+    [industriesQ.data]
+  );
+  const zonesForPanel = useMemo(
+    () => (zonesQ.data ?? []).map((z) => ({ id: z.id, name: z.name })),
+    [zonesQ.data]
+  );
 
   const handleClear = useCallback(() => setFilters(DEFAULT_FILTERS), []);
 
@@ -121,8 +136,8 @@ export default function DirectoryPage() {
     <main className="mx-auto flex max-w-[1200px] flex-col gap-6 px-5 py-10 md:flex-row">
       <FiltersPanel
         state={filters}
-        industries={industries}
-        zones={zonesQ.data?.items ?? []}
+        industries={industriesForPanel}
+        zones={zonesForPanel}
         onChange={setFilters}
         onClear={handleClear}
         count={total}
@@ -135,13 +150,8 @@ export default function DirectoryPage() {
               Business Directory
             </h1>
             <p className="mt-1 text-sm text-on-surface-variant">
-              Discover B4BC members{" "}
-              {typeof total === "number" ? (
-                <>
-                  — <span className="font-semibold">{total}</span> matching
-                  businesses
-                </>
-              ) : null}
+              Discover B4BC members —{" "}
+              <span className="font-semibold">{total}</span> matching businesses
             </p>
           </div>
           <Button variant="primary" size="md">
@@ -159,7 +169,7 @@ export default function DirectoryPage() {
               />
             ))}
           </div>
-        ) : itemsToShow.length === 0 ? (
+        ) : isEmpty ? (
           <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-lowest p-12 text-center">
             <Icon name="search_off" className="text-3xl text-outline" />
             <h3 className="mt-3 text-lg font-semibold">No businesses found</h3>
@@ -178,40 +188,57 @@ export default function DirectoryPage() {
             </Button>
           </div>
         ) : (
-          <div
-            className={cn(
-              "grid grid-cols-1 gap-6 md:grid-cols-2 transition-opacity",
-              showingStale && "opacity-50"
-            )}
-            aria-busy={showingStale}
-          >
-            {itemsToShow.map((biz, idx) => (
-              <BusinessCard
-                key={biz.id}
-                business={biz}
-                featured={idx === 0}
-                industry={
-                  biz.industryId ? industriesById.get(biz.industryId) : null
-                }
-                isFavorite={favoriteIds.has(biz.id)}
-                onToggleFavorite={(id) => toggleFav.mutate(id)}
-              />
-            ))}
-          </div>
-        )}
-
-        {membersQ.hasNextPage ? (
-          <div className="mt-8 flex justify-center">
-            <Button
-              variant="outline"
-              size="md"
-              onClick={() => membersQ.fetchNextPage()}
-              loading={membersQ.isFetchingNextPage}
+          <>
+            <div
+              className={cn(
+                "grid grid-cols-1 gap-6 md:grid-cols-2 transition-opacity",
+                showingStale && "opacity-50"
+              )}
+              aria-busy={showingStale}
             >
-              Load more
-            </Button>
-          </div>
-        ) : null}
+              {items.map((biz, idx) => (
+                <BusinessCard
+                  key={biz.id}
+                  business={biz}
+                  featured={idx === 0 && page === 0}
+                  industry={
+                    biz.industry_id
+                      ? industriesById.get(biz.industry_id) ?? null
+                      : null
+                  }
+                  isFavorite={favIdsQ.data?.has(biz.id) ?? false}
+                  onToggleFavorite={() => toggleFav.mutate(biz)}
+                />
+              ))}
+            </div>
+
+            {totalPages > 1 ? (
+              <div className="mt-8 flex items-center justify-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 0}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                >
+                  <Icon name="chevron_left" /> Previous
+                </Button>
+                <span className="px-3 text-sm text-on-surface-variant">
+                  Page {page + 1} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page + 1 >= totalPages}
+                  onClick={() =>
+                    setPage((p) => Math.min(totalPages - 1, p + 1))
+                  }
+                >
+                  Next <Icon name="chevron_right" />
+                </Button>
+              </div>
+            ) : null}
+          </>
+        )}
       </section>
     </main>
   );

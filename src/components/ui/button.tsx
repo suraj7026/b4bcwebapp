@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { Icon } from "@/components/ui/icon";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger" | "outline";
 type Size = "sm" | "md" | "lg";
@@ -55,11 +56,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       )}
       {...props}
     >
-      {loading ? (
-        <span className="material-symbols-outlined animate-spin text-base">
-          progress_activity
-        </span>
-      ) : null}
+      {loading ? <Icon name="progress_activity" className="animate-spin text-base" /> : null}
       {children}
     </button>
   )

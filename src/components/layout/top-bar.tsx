@@ -1,31 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/ui/icon";
-import { createClient } from "@/utils/supabase/client";
+import { logoutAction } from "@/app/actions/auth";
 import type { SessionUser } from "@/lib/auth";
 
 const NAV = [
   { label: "Dashboard", href: "/dashboard", icon: "space_dashboard" },
   { label: "Directory", href: "/directory", icon: "business_center" },
-  { label: "Favorites", href: "/favorites", icon: "bookmark" },
   { label: "Profile", href: "/profile", icon: "account_circle" },
 ];
 
 export function TopBar({ user }: { user: SessionUser }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const supabase = createClient();
   const [menuOpen, setMenuOpen] = useState(false);
-
-  async function onLogout() {
-    await supabase.auth.signOut();
-    router.replace("/login");
-    router.refresh();
-  }
+  const [isPending, startTransition] = useTransition();
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-outline-variant bg-surface/95 backdrop-blur">
@@ -63,10 +55,9 @@ export function TopBar({ user }: { user: SessionUser }) {
         <div className="flex items-center gap-2">
           <div className="hidden text-right text-xs leading-tight md:block">
             <p className="font-semibold text-on-surface">{user.displayName}</p>
-            <p className="text-on-surface-variant">
-              {user.role.replace("_", " ")}
-              {user.zone ? ` • ${user.zone}` : ""}
-            </p>
+            {user.zone ? (
+              <p className="text-on-surface-variant">{user.zone}</p>
+            ) : null}
           </div>
           <div className="relative">
             <button
@@ -89,16 +80,11 @@ export function TopBar({ user }: { user: SessionUser }) {
                 >
                   <Icon name="account_circle" className="text-base" /> Profile
                 </Link>
-                <Link
-                  href="/privacy"
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-on-surface hover:bg-surface-container-low"
-                >
-                  <Icon name="shield" className="text-base" /> Privacy
-                </Link>
                 <button
                   type="button"
-                  onClick={onLogout}
-                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-on-surface hover:bg-surface-container-low"
+                  disabled={isPending}
+                  onClick={() => startTransition(() => logoutAction())}
+                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-on-surface hover:bg-surface-container-low disabled:opacity-50"
                 >
                   <Icon name="logout" className="text-base" /> Sign out
                 </button>

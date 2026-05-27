@@ -1,21 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { createClient } from "@/utils/supabase/client";
-import {
-  fetchFavoriteIds,
-  fetchIndustries,
-  fetchMembers,
-  fetchZones,
-  toggleFavorite,
+  fetchIndustriesAction,
+  fetchMembersAction,
+  fetchZonesAction,
   type MemberListFilters,
-} from "@/lib/supabase-queries";
+} from "@/app/actions/queries";
 import {
   FiltersPanel,
   type DirectoryFiltersState,
@@ -24,7 +17,7 @@ import { BusinessCard } from "@/components/directory/business-card";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
-import type { DirectoryMember, Industry } from "@/types/database";
+import type { Industry } from "@/types/database";
 
 const DEFAULT_FILTERS: DirectoryFiltersState = {
   q: "",
@@ -42,44 +35,77 @@ function useDebounced<T>(value: T, ms = 300): T {
   return v;
 }
 
-export default function DirectoryPage() {
-  const sb = useMemo(() => createClient(), []);
-  const qc = useQueryClient();
-  const [filters, setFilters] = useState<DirectoryFiltersState>(DEFAULT_FILTERS);
+function parseFiltersFromUrl(
+  sp: URLSearchParams
+): DirectoryFiltersState {
+  const sortParam = sp.get("sort");
+  const validSorts: DirectoryFiltersState["sort"][] = ["name", "-name", "recent"];
+  const sort = validSorts.includes(sortParam as DirectoryFiltersState["sort"])
+    ? (sortParam as DirectoryFiltersState["sort"])
+    : "name";
+  return {
+    q: sp.get("q") ?? "",
+    industryId: sp.get("industry"),
+    zone: sp.get("zone"),
+    sort,
+  };
+}
+
+function filtersToSearchString(f: DirectoryFiltersState): string {
+  const params = new URLSearchParams();
+  if (f.q.trim()) params.set("q", f.q.trim());
+  if (f.industryId != null) params.set("industry", f.industryId);
+  if (f.zone) params.set("zone", f.zone);
+  if (f.sort && f.sort !== "name") params.set("sort", f.sort);
+  return params.toString();
+}
+
+function DirectoryView() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Seed initial state from the URL so dashboard tile clicks
+  // (e.g. /directory?industry=6) preselect the right filter.
+  const [filters, setFilters] = useState<DirectoryFiltersState>(() =>
+    parseFiltersFromUrl(new URLSearchParams(searchParams.toString()))
+  );
   const [page, setPage] = useState(0);
   const debounced = useDebounced(filters, 300);
 
+  // Mirror filter state back to the URL so the page is shareable
+  // and browser back/forward work intuitively.
   useEffect(() => {
-    setPage(0);
-  }, [debounced.q, debounced.industryId, debounced.zone, debounced.sort]);
+    const next = filtersToSearchString(debounced);
+    const current = searchParams.toString();
+    if (next !== current) {
+      router.replace(next ? `/directory?${next}` : "/directory", {
+        scroll: false,
+      });
+    }
+  }, [debounced, router, searchParams]);
 
-  const userQ = useQuery({
-    queryKey: ["me"],
-    queryFn: async () => (await sb.auth.getUser()).data.user,
-  });
-  const userId = userQ.data?.id ?? null;
+  const updateFilters = useCallback((next: DirectoryFiltersState) => {
+    setFilters(next);
+    setPage(0);
+  }, []);
 
   const industriesQ = useQuery({
     queryKey: ["industries"],
-    queryFn: () => fetchIndustries(sb),
+    queryFn: () => fetchIndustriesAction(),
     staleTime: 5 * 60_000,
   });
   const zonesQ = useQuery({
     queryKey: ["zones"],
-    queryFn: () => fetchZones(sb),
+    queryFn: () => fetchZonesAction(),
     staleTime: 5 * 60_000,
-  });
-  const favIdsQ = useQuery({
-    queryKey: ["favorite-ids", userId],
-    queryFn: () => (userId ? fetchFavoriteIds(sb, userId) : new Set<string>()),
-    enabled: !!userId,
   });
 
   const filtersForQuery: MemberListFilters = {
     q: debounced.q.trim() || undefined,
-    industryId: debounced.industryId
-      ? parseInt(debounced.industryId, 10)
-      : undefined,
+    industryId:
+      debounced.industryId != null
+        ? parseInt(debounced.industryId, 10)
+        : undefined,
     zoneId: debounced.zone ?? undefined,
     sort: debounced.sort,
     page,
@@ -87,18 +113,8 @@ export default function DirectoryPage() {
 
   const membersQ = useQuery({
     queryKey: ["members", filtersForQuery],
-    queryFn: () => fetchMembers(sb, filtersForQuery),
+    queryFn: () => fetchMembersAction(filtersForQuery),
     placeholderData: keepPreviousData,
-  });
-
-  const toggleFav = useMutation({
-    mutationFn: async (m: DirectoryMember) => {
-      if (!userId) throw new Error("Not signed in");
-      const isFav = favIdsQ.data?.has(m.id) ?? false;
-      await toggleFavorite(sb, userId, m.id, isFav);
-    },
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ["favorite-ids", userId] }),
   });
 
   const total = membersQ.data?.total ?? 0;
@@ -113,7 +129,6 @@ export default function DirectoryPage() {
     return map;
   }, [industriesQ.data]);
 
-  // FiltersPanel still keys industry by id-string (legacy from prefixed ids).
   const industriesForPanel = useMemo(
     () =>
       (industriesQ.data ?? []).map((i) => ({
@@ -130,7 +145,10 @@ export default function DirectoryPage() {
     [zonesQ.data]
   );
 
-  const handleClear = useCallback(() => setFilters(DEFAULT_FILTERS), []);
+  const handleClear = useCallback(
+    () => updateFilters(DEFAULT_FILTERS),
+    [updateFilters]
+  );
 
   return (
     <main className="mx-auto flex max-w-[1200px] flex-col gap-6 px-5 py-10 md:flex-row">
@@ -138,7 +156,7 @@ export default function DirectoryPage() {
         state={filters}
         industries={industriesForPanel}
         zones={zonesForPanel}
-        onChange={setFilters}
+        onChange={updateFilters}
         onClear={handleClear}
         count={total}
       />
@@ -154,10 +172,6 @@ export default function DirectoryPage() {
               <span className="font-semibold">{total}</span> matching businesses
             </p>
           </div>
-          <Button variant="primary" size="md">
-            <Icon name="add" className="text-base" />
-            Add Business
-          </Button>
         </div>
 
         {membersQ.isPending ? (
@@ -202,12 +216,10 @@ export default function DirectoryPage() {
                   business={biz}
                   featured={idx === 0 && page === 0}
                   industry={
-                    biz.industry_id
+                    biz.industry_id != null
                       ? industriesById.get(biz.industry_id) ?? null
                       : null
                   }
-                  isFavorite={favIdsQ.data?.has(biz.id) ?? false}
-                  onToggleFavorite={() => toggleFav.mutate(biz)}
                 />
               ))}
             </div>
@@ -241,5 +253,13 @@ export default function DirectoryPage() {
         )}
       </section>
     </main>
+  );
+}
+
+export default function DirectoryPage() {
+  return (
+    <Suspense fallback={null}>
+      <DirectoryView />
+    </Suspense>
   );
 }

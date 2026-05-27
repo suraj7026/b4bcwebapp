@@ -1,23 +1,15 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import { use, useMemo } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { createClient } from "@/utils/supabase/client";
-import {
-  fetchFavoriteIds,
-  fetchIndustries,
-  fetchMember,
-  toggleFavorite,
-} from "@/lib/supabase-queries";
+  fetchIndustriesAction,
+  fetchMemberAction,
+} from "@/app/actions/queries";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Card, CardBody, Chip } from "@/components/ui/card";
-import { ReportDialog } from "@/components/directory/report-dialog";
 import { Logo } from "@/components/directory/logo";
 
 export default function MemberDetailPage({
@@ -26,41 +18,25 @@ export default function MemberDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const sb = useMemo(() => createClient(), []);
-  const qc = useQueryClient();
-  const [reportOpen, setReportOpen] = useState(false);
-
-  const userQ = useQuery({
-    queryKey: ["me"],
-    queryFn: async () => (await sb.auth.getUser()).data.user,
-  });
-  const userId = userQ.data?.id ?? null;
 
   const memberQ = useQuery({
     queryKey: ["member", id],
-    queryFn: () => fetchMember(sb, id),
+    queryFn: () => fetchMemberAction(id),
   });
   const industriesQ = useQuery({
     queryKey: ["industries"],
-    queryFn: () => fetchIndustries(sb),
+    queryFn: () => fetchIndustriesAction(),
     staleTime: 5 * 60_000,
   });
-  const favIdsQ = useQuery({
-    queryKey: ["favorite-ids", userId],
-    queryFn: () => (userId ? fetchFavoriteIds(sb, userId) : new Set<string>()),
-    enabled: !!userId,
-  });
 
-  const isFavorite = favIdsQ.data?.has(id) ?? false;
-
-  const toggleFav = useMutation({
-    mutationFn: async () => {
-      if (!userId) throw new Error("Not signed in");
-      await toggleFavorite(sb, userId, id, isFavorite);
-    },
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ["favorite-ids", userId] }),
-  });
+  const m = memberQ.data;
+  const industry = useMemo(
+    () =>
+      m?.industry_id
+        ? industriesQ.data?.find((i) => i.id === m.industry_id) ?? null
+        : null,
+    [industriesQ.data, m]
+  );
 
   if (memberQ.isLoading) {
     return (
@@ -70,12 +46,12 @@ export default function MemberDetailPage({
     );
   }
 
-  if (memberQ.isError || !memberQ.data) {
+  if (memberQ.isError || !m) {
     return (
       <div className="mx-auto max-w-[1100px] px-5 py-10 text-center">
         <h1 className="text-2xl font-semibold">Member not found</h1>
         <p className="mt-2 text-sm text-on-surface-variant">
-          This profile may have been removed or is outside of your zone.
+          This profile may have been removed.
         </p>
         <Link
           href="/directory"
@@ -87,10 +63,17 @@ export default function MemberDetailPage({
     );
   }
 
-  const m = memberQ.data;
-  const industry =
-    industriesQ.data?.find((i) => i.id === m.industry_id) ?? null;
   const title = m.company_name || m.contact_name || "Untitled";
+  const about = m.description ?? m.business_nature;
+  const businessFacts = [
+    { label: "Designation", value: m.designation },
+    { label: "Sector", value: m.sector },
+    { label: "Industry", value: m.industry_text },
+    { label: "Business nature", value: m.business_nature },
+    { label: "Business location", value: m.business_location },
+    { label: "Chapter", value: m.chapter_name },
+    { label: "Member ID", value: m.registered_id },
+  ].filter((item) => item.value);
 
   return (
     <main className="mx-auto max-w-[1100px] px-5 py-10">
@@ -109,7 +92,9 @@ export default function MemberDetailPage({
                 src={m.logo_url}
                 label={title}
                 size={80}
-                accent={industry?.accent_color ?? m.industry_accent_color ?? undefined}
+                accent={
+                  industry?.accent_color ?? m.industry_accent_color ?? undefined
+                }
               />
               <div className="flex-1">
                 <div className="flex items-start justify-between gap-2">
@@ -119,7 +104,7 @@ export default function MemberDetailPage({
                     </h1>
                     <p className="mt-1 text-sm text-on-surface-variant">
                       {industry?.name ?? m.industry_name ?? "B4BC Member"}
-                      {m.zone_name ? ` • ${m.zone_name} zone` : ""}
+                      {m.zone_name ? ` • ${m.zone_name}` : ""}
                     </p>
                   </div>
                   <Icon
@@ -131,22 +116,41 @@ export default function MemberDetailPage({
               </div>
             </div>
 
-            {m.description ? (
+            {about ? (
               <section>
                 <h2 className="text-lg font-semibold">About</h2>
                 <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-on-surface-variant">
-                  {m.description}
+                  {about}
                 </p>
               </section>
             ) : null}
 
-            {m.services.length ? (
+            {businessFacts.length ? (
               <section>
-                <h2 className="text-lg font-semibold">Services</h2>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {m.services.map((s) => (
-                    <Chip key={s}>{s}</Chip>
+                <h2 className="text-lg font-semibold">Business profile</h2>
+                <dl className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {businessFacts.map((item) => (
+                    <div
+                      key={item.label}
+                      className="rounded-lg border border-outline-variant bg-surface-container-low p-3"
+                    >
+                      <dt className="text-xs font-medium uppercase tracking-wider text-outline">
+                        {item.label}
+                      </dt>
+                      <dd className="mt-1 text-sm font-medium text-on-surface">
+                        {item.value}
+                      </dd>
+                    </div>
                   ))}
+                </dl>
+              </section>
+            ) : null}
+
+            {m.sector ? (
+              <section>
+                <h2 className="text-lg font-semibold">Sector</h2>
+                <div className="mt-2">
+                  <Chip>{m.sector}</Chip>
                 </div>
               </section>
             ) : null}
@@ -222,40 +226,8 @@ export default function MemberDetailPage({
               </ul>
             </CardBody>
           </Card>
-
-          <Card>
-            <CardBody className="flex flex-col gap-2">
-              <Button
-                variant={isFavorite ? "secondary" : "outline"}
-                className="w-full"
-                onClick={() => toggleFav.mutate()}
-                loading={toggleFav.isPending}
-              >
-                <Icon
-                  name="bookmark"
-                  filled={isFavorite}
-                  className="text-base"
-                />
-                {isFavorite ? "Saved to favorites" : "Save to favorites"}
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full text-on-surface-variant"
-                onClick={() => setReportOpen(true)}
-              >
-                <Icon name="flag" className="text-base" />
-                Report this listing
-              </Button>
-            </CardBody>
-          </Card>
         </aside>
       </div>
-
-      <ReportDialog
-        open={reportOpen}
-        onClose={() => setReportOpen(false)}
-        memberId={id}
-      />
     </main>
   );
 }

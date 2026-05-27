@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { Icon } from "@/components/ui/icon";
 
 export interface InputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -17,7 +18,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     { leadingIcon, trailing, label, hint, error, className, id, ...props },
     ref
   ) => {
-    const inputId = id || React.useId();
+    const generatedId = React.useId();
+    const inputId = id || generatedId;
     return (
       <div className="flex flex-col gap-1">
         {label ? (
@@ -30,12 +32,10 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         ) : null}
         <div className="relative flex items-center">
           {leadingIcon ? (
-            <span
-              className="material-symbols-outlined absolute left-3 text-outline pointer-events-none"
-              aria-hidden
-            >
-              {leadingIcon}
-            </span>
+            <Icon
+              name={leadingIcon}
+              className="pointer-events-none absolute left-3 text-base text-outline"
+            />
           ) : null}
           <input
             ref={ref}

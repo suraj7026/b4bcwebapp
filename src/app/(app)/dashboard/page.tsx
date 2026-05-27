@@ -1,14 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { createClient } from "@/utils/supabase/client";
-import {
-  fetchFavorites,
-  fetchIndustries,
-  fetchMembers,
-} from "@/lib/supabase-queries";
+import { fetchDashboardStatsAction } from "@/app/actions/queries";
 import { Card, CardBody } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
@@ -27,48 +21,20 @@ const ICONS = [
 ];
 
 export default function DashboardPage() {
-  const sb = useMemo(() => createClient(), []);
-
-  const userQ = useQuery({
-    queryKey: ["me"],
-    queryFn: async () => (await sb.auth.getUser()).data.user,
-  });
-  const userId = userQ.data?.id ?? null;
-
-  const industriesQ = useQuery({
-    queryKey: ["industries"],
-    queryFn: () => fetchIndustries(sb),
-    staleTime: 5 * 60_000,
-  });
-  const membersQ = useQuery({
-    queryKey: ["members-count"],
-    queryFn: () => fetchMembers(sb, { pageSize: 1, page: 0 }),
-  });
-  const favoritesQ = useQuery({
-    queryKey: ["favorites", userId],
-    queryFn: () => (userId ? fetchFavorites(sb, userId) : []),
-    enabled: !!userId,
+  const statsQ = useQuery({
+    queryKey: ["dashboard"],
+    queryFn: () => fetchDashboardStatsAction(),
+    staleTime: 60_000,
   });
 
-  const totals = {
-    indCount: industriesQ.data?.length ?? 0,
-    memberCount: membersQ.data?.total ?? 0,
-    favoritesCount: favoritesQ.data?.length ?? 0,
-  };
-  const industries = industriesQ.data ?? [];
-  const displayName =
-    (userQ.data?.user_metadata as { full_name?: string } | undefined)
-      ?.full_name ||
-    userQ.data?.email?.split("@")[0] ||
-    "B4BC operator";
+  const industries = statsQ.data?.industries ?? [];
+  const totalMembers = statsQ.data?.totalMembers ?? 0;
 
   return (
     <main className="mx-auto max-w-[1200px] px-5 py-10">
       <header className="mb-8 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-sm text-on-surface-variant">
-            Welcome, {displayName}
-          </p>
+          <p className="text-sm text-on-surface-variant">B4BC Connect</p>
           <h1 className="text-4xl font-bold tracking-tight">
             Industries Dashboard
           </h1>
@@ -81,14 +47,14 @@ export default function DashboardPage() {
         </Link>
       </header>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card>
           <CardBody>
             <p className="text-xs uppercase tracking-wider text-outline">
               Total Businesses
             </p>
             <p className="mt-2 text-3xl font-semibold">
-              {totals.memberCount.toLocaleString()}
+              {totalMembers.toLocaleString()}
             </p>
           </CardBody>
         </Card>
@@ -97,17 +63,7 @@ export default function DashboardPage() {
             <p className="text-xs uppercase tracking-wider text-outline">
               Industries
             </p>
-            <p className="mt-2 text-3xl font-semibold">{totals.indCount}</p>
-          </CardBody>
-        </Card>
-        <Card>
-          <CardBody>
-            <p className="text-xs uppercase tracking-wider text-outline">
-              Your Favorites
-            </p>
-            <p className="mt-2 text-3xl font-semibold">
-              {totals.favoritesCount}
-            </p>
+            <p className="mt-2 text-3xl font-semibold">{industries.length}</p>
           </CardBody>
         </Card>
       </section>
@@ -122,7 +78,7 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {industriesQ.isLoading
+          {statsQ.isLoading
             ? Array.from({ length: 6 }).map((_, i) => (
                 <div
                   key={i}
@@ -150,9 +106,15 @@ export default function DashboardPage() {
                   <h3 className="text-base font-semibold text-on-surface">
                     {ind.name}
                   </h3>
-                  <p className="mt-1 line-clamp-2 text-sm text-on-surface-variant">
-                    {ind.description || "B4BC industry segment"}
+                  <p className="mt-1 text-sm text-on-surface-variant">
+                    {ind.member_count}{" "}
+                    {ind.member_count === 1 ? "member" : "members"}
                   </p>
+                  {ind.description ? (
+                    <p className="mt-1 line-clamp-2 text-xs text-outline">
+                      {ind.description}
+                    </p>
+                  ) : null}
                 </Link>
               ))}
         </div>

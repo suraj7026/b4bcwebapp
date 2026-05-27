@@ -1,35 +1,39 @@
 import "server-only";
-import { createClient } from "@/utils/supabase/server";
-import type { AppRole, AppUserMetadata } from "@/types/database";
+import { queryOne } from "@/lib/mysql";
+import { readSession } from "@/lib/session";
 
 export interface SessionUser {
-  id: string;
+  memberId: number;
   email: string | null;
   displayName: string;
-  role: AppRole;
   zone: string | null;
 }
 
-const fallback = (email: string | null | undefined) =>
-  (email ?? "B4BC").split("@")[0]?.replace(/[._-]+/g, " ") ?? "B4BC";
+const fallback = (s: string | null | undefined) =>
+  (s ?? "B4BC").split("@")[0]?.replace(/[._-]+/g, " ") ?? "B4BC";
 
 export async function getSessionUser(): Promise<SessionUser | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  const session = await readSession();
+  if (!session) return null;
 
-  const meta = (user.app_metadata ?? {}) as Partial<AppUserMetadata>;
-  const userMeta = (user.user_metadata ?? {}) as { full_name?: string };
+  const row = await queryOne<{
+    member_name: string | null;
+    email_address: string | null;
+    member_zone: string | null;
+  }>(
+    `SELECT member_name, email_address, member_zone
+     FROM b4b_members m
+     WHERE m.member_id = ?
+       AND (m.date_of_exit IS NULL OR m.date_of_exit = '0000-00-00')
+     LIMIT 1`,
+    [session.memberId]
+  );
+  if (!row) return null;
+
   return {
-    id: user.id,
-    email: user.email ?? null,
-    displayName:
-      meta.display_name ||
-      userMeta.full_name ||
-      fallback(user.email),
-    role: (meta.role as AppRole) ?? "member",
-    zone: meta.zone ?? null,
+    memberId: session.memberId,
+    email: row.email_address,
+    displayName: row.member_name?.trim() || fallback(row.email_address),
+    zone: row.member_zone,
   };
 }

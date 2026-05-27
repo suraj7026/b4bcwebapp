@@ -12,7 +12,7 @@ service-role secret in scripts.
   member roles encoded in `app_metadata`
 - **State**: TanStack Query v5
 - **Styling**: Tailwind CSS v4, design tokens from the Stitch "B4BC Connect
-  Business Directory" project (Inter, `#003ec7` primary, Material Symbols)
+  Business Directory" project (Inter, `#003ec7` primary, Lucide icons)
 
 ## Architecture
 ```
@@ -27,7 +27,9 @@ service-role secret in scripts.
 ```
 
 ## Routes
-- `/login` — Supabase email/password + magic-link sign-in.
+- `/login` — Supabase email/password sign-in.
+- `/signup` — Supabase email/password account creation.
+- `/reset-password` — Supabase password recovery completion.
 - `/dashboard` — totals + industry tiles.
 - `/directory` — paginated, searchable directory with industry/zone/sort
   filters; `keepPreviousData` for smooth refetches; pagination via offset.
@@ -67,6 +69,8 @@ Roles + zone live in `auth.users.app_metadata`:
 { "role": "member" }                      // sees all active members; edits own row
 ```
 Policies in [`20260526120100_rls.sql`](supabase/migrations/20260526120100_rls.sql).
+Self-serve signups are defaulted to `{ "role": "member" }` by an Auth trigger
+so RLS can trust the role claim after email/password signup.
 
 ### Migration from the old Django Postgres
 [`scripts/migrate-from-legacy.ts`](scripts/migrate-from-legacy.ts) reads from
@@ -90,6 +94,17 @@ Run it:
 
 npx tsx scripts/migrate-from-legacy.ts
 ```
+
+### Migration from a phpMyAdmin JSON export
+For the `b4bc_members.json` export, import the app-facing directory data with:
+```bash
+npm run import:json -- /path/to/b4bc_members.json
+npx tsx scripts/create-operators.ts
+```
+
+The JSON importer maps `b4b_members`, `b4b_zones`, and member industries into
+the Supabase schema used by the app. Operator reset links are written to
+`scripts/output/operator-reset-links.csv`.
 
 ## Local development
 ```bash
@@ -126,6 +141,11 @@ src/
       profile/
       privacy/
     login/
+    reset-password/
+    signup/
+    auth/
+      callback/
+      confirm/
     layout.tsx
     page.tsx               # Redirects to /login or /directory
     globals.css            # Tailwind tokens + design system
@@ -143,7 +163,7 @@ src/
     media.ts               # resolveLogoUrl()
     supabase-queries.ts    # typed queries used by the pages
     utils.ts
-  middleware.ts            # Wraps utils/supabase/middleware.updateSession
+  proxy.ts                 # Wraps utils/supabase/middleware.updateSession
   types/database.ts        # Hand-written Database type for the JS client
   utils/supabase/
     server.ts              # createClient() for RSC / route handlers

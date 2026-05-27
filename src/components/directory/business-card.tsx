@@ -26,6 +26,7 @@ export function BusinessCard({
   const accent = industry?.accent_color ?? business.industry_accent_color ?? undefined;
   const location =
     business.zone_name || business.city || business.state || "—";
+  const summary = business.business_nature ?? business.description;
 
   return (
     <article
@@ -55,10 +56,16 @@ export function BusinessCard({
       </div>
 
       <div className="flex flex-1 flex-col gap-4">
-        {business.description ? (
+        {summary ? (
           <p className="text-sm text-on-surface-variant line-clamp-2">
-            {business.description}
+            {summary}
           </p>
+        ) : null}
+
+        {business.sector ? (
+          <div>
+            <Chip>{business.sector}</Chip>
+          </div>
         ) : null}
 
         {business.services.length ? (

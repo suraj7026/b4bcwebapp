@@ -85,6 +85,12 @@ const nextConfig: NextConfig = {
 
   eslint: { ignoreDuringBuilds: true },
 
+  // `jose` ships a Web-API JWE deflate path that references CompressionStream
+  // which Next's Edge bundler flags. We only use HS256 signing (no JWE), so
+  // the code is dead at runtime — but the warning is noisy. Externalize jose
+  // so it's resolved from node_modules at runtime instead of bundled.
+  serverExternalPackages: ["jose"],
+
   // Single-process build keeps React contexts in one module instance.
   experimental: {
     workerThreads: false,

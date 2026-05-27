@@ -1,161 +1,79 @@
 import type { NextConfig } from "next";
 import fs from "node:fs";
+import path from "node:path";
 
 // =========================================================================
-// WINDOWS / PLESK PATH-CASING FIX (read this whole thing)
+// WINDOWS / PLESK PATH-CASING — surgical fix
 //
-// Plesk on Windows exposes the same physical project directory through TWO
-// path casings:   C:\Inetpub\vhosts\…  and  C:\inetpub\vhosts\…
-// Webpack walks the filesystem to resolve modules; depending on which call
-// site (process.cwd, require.resolve, __dirname, fs.realpath…) it uses, it
-// gets one casing or the other. Each unique string becomes a unique module
-// identifier — so React, react-dom, next/dist/* all get loaded twice. When
-// the synthetic Pages-Router /_error tries to render at prerender time, it
-// uses React from one copy while the context was created on the other copy
-// → useContext returns null → "Cannot read properties of null (reading
-// 'useContext')" → build dies.
+// Plesk on Windows exposes the same physical project directory through two
+// path casings (C:\Inetpub vs C:\inetpub). Webpack resolves React via one
+// casing and the Pages-Router /_error bundle via the other, ends up with
+// TWO copies of React, and prerender of /500 crashes because useContext
+// returns null on the wrong copy.
 //
-// Lowercasing alone is safe on Windows because NTFS is case-insensitive.
-// We attack the problem at two layers so paths converge to ONE string no
-// matter which Node API Webpack reaches for:
+// Earlier attempts patched fs.realpathSync globally — that broke Next.js's
+// internal tracing state ("traceChild of undefined"). This config takes a
+// narrower approach:
 //
-//   1. Patch fs.realpathSync / fs.realpath / fs.realpathSync.native to
-//      return lowercase. Webpack's resolver uses these.
-//   2. A custom Webpack plugin that lowercases every module identifier
-//      (resource, request, context, loader paths) on `afterResolve`.
+//   1. Normalize process.cwd() once at startup to the canonical NTFS
+//      casing. Harmless and helps reduce some warnings.
+//   2. Webpack alias react / react-dom / react/jsx-runtime to absolute
+//      paths derived from a single canonical project root. This forces
+//      every import path — regardless of original casing — to land on the
+//      same resolved module. Single React instance → context survives.
 //
-// Plus the prior workarounds: chdir to canonical cwd, single-thread build,
-// standalone output, no symlink walking. Belt and suspenders and another belt.
 // No-op on macOS / Linux.
 // =========================================================================
 
+let projectRoot = __dirname;
+
 if (process.platform === "win32") {
-  const lc = (s: unknown) => (typeof s === "string" ? s.toLowerCase() : s);
-
-  // --- Patch fs.realpathSync (sync) ---
-  const origRealpathSync = fs.realpathSync;
-  const origRealpathNative = fs.realpathSync.native;
-  const patchedRealpathSync = (...args: unknown[]) =>
-    lc((origRealpathSync as (...a: unknown[]) => unknown)(...args));
-  const patchedRealpathNative = (...args: unknown[]) =>
-    lc((origRealpathNative as (...a: unknown[]) => unknown)(...args));
-  (patchedRealpathSync as { native?: typeof patchedRealpathNative }).native =
-    patchedRealpathNative;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (fs as any).realpathSync = patchedRealpathSync;
-
-  // --- Patch fs.realpath (async + promisified) ---
-  const origRealpath = fs.realpath;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (fs as any).realpath = (
-    p: unknown,
-    options: unknown,
-    callback?: (err: unknown, resolved: unknown) => void
-  ) => {
-    let cb = callback;
-    let opts = options;
-    if (typeof options === "function") {
-      cb = options as typeof callback;
-      opts = undefined;
-    }
-    (origRealpath as (...a: unknown[]) => void)(
-      p,
-      opts,
-      (err: unknown, result: unknown) => {
-        cb?.(err, lc(result));
-      }
-    );
-  };
-
-  // --- Now normalize process.cwd() once everything's wired up ---
   try {
-    const real = (fs.realpathSync.native as (p: string) => string)(
-      process.cwd()
-    );
+    const real = fs.realpathSync.native(process.cwd());
     if (real !== process.cwd()) process.chdir(real);
+    projectRoot = real;
   } catch {
     /* best-effort */
   }
 }
 
 const nextConfig: NextConfig = {
-  // Self-contained bundle; uses different build code paths than the default
-  // and reduces what we ship to the server.
   output: "standalone",
 
   eslint: { ignoreDuringBuilds: true },
 
-  // `jose` ships a Web-API JWE deflate path that references CompressionStream
-  // which Next's Edge bundler flags. We only use HS256 signing (no JWE), so
-  // the code is dead at runtime — but the warning is noisy. Externalize jose
-  // so it's resolved from node_modules at runtime instead of bundled.
   serverExternalPackages: ["jose"],
 
-  // Single-process build keeps React contexts in one module instance.
   experimental: {
     workerThreads: false,
     cpus: 1,
   },
 
   webpack: (config) => {
-    if (config.resolve) config.resolve.symlinks = false;
+    config.resolve = config.resolve ?? {};
+    config.resolve.symlinks = false;
 
     if (process.platform === "win32") {
-      // Webpack plugin: lowercase every module identifier on afterResolve.
-      // This guarantees identical strings even if any code path slipped
-      // past our fs patches with the wrong casing.
-      config.plugins = config.plugins ?? [];
-      config.plugins.push({
-        apply(compiler: {
-          hooks: {
-            normalModuleFactory: {
-              tap: (
-                name: string,
-                fn: (nmf: {
-                  hooks: {
-                    afterResolve: {
-                      tap: (
-                        name: string,
-                        fn: (data: {
-                          createData?: Record<string, unknown>;
-                        }) => void
-                      ) => void;
-                    };
-                  };
-                }) => void
-              ) => void;
-            };
-          };
-        }) {
-          compiler.hooks.normalModuleFactory.tap(
-            "ForceLowercasePaths",
-            (nmf) => {
-              nmf.hooks.afterResolve.tap(
-                "ForceLowercasePaths",
-                (resolveData) => {
-                  const cd = resolveData.createData;
-                  if (!cd) return;
-                  const lc = (s: unknown) =>
-                    typeof s === "string" ? s.toLowerCase() : s;
-                  if (cd.resource) cd.resource = lc(cd.resource);
-                  if (cd.userRequest) cd.userRequest = lc(cd.userRequest);
-                  if (cd.context) cd.context = lc(cd.context);
-                  if (cd.rawRequest) cd.rawRequest = lc(cd.rawRequest);
-                  if (Array.isArray(cd.loaders)) {
-                    for (const l of cd.loaders as {
-                      loader?: string;
-                    }[]) {
-                      if (l.loader && typeof l.loader === "string") {
-                        l.loader = l.loader.toLowerCase();
-                      }
-                    }
-                  }
-                }
-              );
-            }
-          );
-        },
-      });
+      // Force React + ReactDOM to resolve to ONE absolute path so the
+      // doubly-cased import paths Webpack might discover all converge on
+      // the same module instance. Prevents the "two React copies →
+      // useContext returns null" failure during prerender.
+      const reactPath = path.join(projectRoot, "node_modules", "react");
+      const reactDomPath = path.join(
+        projectRoot,
+        "node_modules",
+        "react-dom"
+      );
+      const reactJsxRuntime = path.join(reactPath, "jsx-runtime.js");
+      const reactJsxDevRuntime = path.join(reactPath, "jsx-dev-runtime.js");
+
+      config.resolve.alias = {
+        ...(config.resolve.alias as Record<string, string> | undefined),
+        react: reactPath,
+        "react-dom": reactDomPath,
+        "react/jsx-runtime": reactJsxRuntime,
+        "react/jsx-dev-runtime": reactJsxDevRuntime,
+      };
     }
 
     return config;

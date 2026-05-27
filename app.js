@@ -14,8 +14,22 @@
 //        NEXT_PUBLIC_MEDIA_BASE_URL
 //   4. Restart App.
 
+const fs = require("fs");
 const { createServer } = require("http");
 const { parse } = require("url");
+
+// Windows / Plesk cwd-casing fix: see next.config.ts for the full story.
+// Process inherits a lowercased cwd; force it to match the on-disk casing
+// so Next.js doesn't load every module twice at runtime.
+if (process.platform === "win32") {
+  try {
+    const real = fs.realpathSync.native(process.cwd());
+    if (real !== process.cwd()) {
+      process.chdir(real);
+    }
+  } catch {}
+}
+
 const next = require("next");
 
 const dev = process.env.NODE_ENV !== "production";

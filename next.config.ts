@@ -2,34 +2,39 @@ import type { NextConfig } from "next";
 import fs from "node:fs";
 
 // --- Windows / Plesk cwd-casing fix --------------------------------------
-//
-// On Plesk Windows the project lives at C:\Inetpub\vhosts\... but the
-// process inherits a cwd lowercased to C:\inetpub\... Webpack treats those
-// as two different module paths and loads every Next.js + React module
-// twice. That double-load is what crashes `next build` with
-// "Cannot read properties of null (reading 'useContext')" during prerender.
-//
-// fs.realpathSync.native returns the canonical NTFS casing as stored on
-// disk. Forcing process.cwd() to match that *before* Next.js initializes
-// webpack makes every loader resolve modules under one consistent path.
-//
-// No-op on macOS / Linux.
+// Force process.cwd() to match the canonical NTFS casing before Next.js
+// initializes Webpack. See git history for full diagnosis.
 if (process.platform === "win32") {
   try {
     const real = fs.realpathSync.native(process.cwd());
-    if (real !== process.cwd()) {
-      process.chdir(real);
-    }
-  } catch {
-    // best-effort; don't fail the build if realpath blows up
-  }
+    if (real !== process.cwd()) process.chdir(real);
+  } catch {}
 }
 // -------------------------------------------------------------------------
 
 const nextConfig: NextConfig = {
-  // Plesk's lint config import paths can break on Windows; we rely on
-  // `tsc --noEmit` for type safety so the build doesn't need lint.
+  // Standalone output produces a self-contained .next/standalone/ tree that
+  // sidesteps the Pages-Router synthetic /_error + /_app prerender that
+  // double-loads React on Plesk Windows.
+  output: "standalone",
+
   eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: false },
+
+  // Run the build single-threaded so the workStore + React contexts stay in
+  // one process. Avoids "Cannot read properties of null (reading
+  // 'useContext')" caused by double-loaded modules.
+  experimental: {
+    workerThreads: false,
+    cpus: 1,
+  },
+
+  webpack: (config) => {
+    // Tell Webpack not to walk symlinks — keeps module identifiers stable
+    // when Plesk exposes the same directory through two cased paths.
+    if (config.resolve) config.resolve.symlinks = false;
+    return config;
+  },
 };
 
 export default nextConfig;

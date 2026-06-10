@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Find Partners | B4BC Connect</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface": "#1a1b23",
+                        "border-subtle": "#E2E8F0",
+                        "primary": "#002b92",
+                        "on-tertiary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "surface-tint": "#2551d8",
+                        "on-secondary-fixed-variant": "#44474a",
+                        "surface-bright": "#fbf8ff",
+                        "on-primary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-container": "#adbcff",
+                        "on-tertiary-container": "#ffaa94",
+                        "on-error-container": "#93000a",
+                        "primary-fixed-dim": "#b7c4ff",
+                        "on-primary-fixed-variant": "#0038b6",
+                        "surface": "#fbf8ff",
+                        "surface-container-high": "#e8e7f3",
+                        "on-primary-fixed": "#001452",
+                        "text-muted": "#64748B",
+                        "surface-blue": "#0037B0",
+                        "secondary-container": "#e0e3e6",
+                        "tertiary-fixed": "#ffdbd2",
+                        "primary-container": "#003ec7",
+                        "on-secondary": "#ffffff",
+                        "tertiary": "#6d1600",
+                        "on-secondary-fixed": "#191c1e",
+                        "inverse-primary": "#b7c4ff",
+                        "inverse-on-surface": "#f0f0fb",
+                        "secondary": "#5b5f61",
+                        "outline-variant": "#c4c5d7",
+                        "surface-container-low": "#f3f2fe",
+                        "outline": "#747686",
+                        "on-background": "#1a1b23",
+                        "surface-container": "#ededf8",
+                        "secondary-fixed": "#e0e3e6",
+                        "on-tertiary-fixed-variant": "#891f00",
+                        "primary-fixed": "#dde1ff",
+                        "tertiary-container": "#952301",
+                        "on-secondary-container": "#616567",
+                        "surface-dim": "#d9d9e4",
+                        "tertiary-fixed-dim": "#ffb4a1",
+                        "on-tertiary-fixed": "#3c0800",
+                        "error": "#ba1a1a",
+                        "on-surface-variant": "#434654",
+                        "surface-container-highest": "#e2e1ed",
+                        "surface-variant": "#e2e1ed",
+                        "inverse-surface": "#2f3039",
+                        "secondary-fixed-dim": "#c4c7ca",
+                        "error-container": "#ffdad6",
+                        "background": "#fbf8ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-desktop": "32px",
+                        "max-width": "1280px",
+                        "margin-mobile": "16px",
+                        "gutter": "24px",
+                        "unit": "4px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { background-color: #F7F9FC; }
+    </style>
+</head>
+<body class="font-body-md text-body-md text-on-surface">
+<div class="flex min-h-screen">
+<!-- SideNavBar - Aligned with COMPONENTS_11 -->
+<aside class="fixed left-0 top-0 h-full w-[280px] z-40 hidden md:block bg-surface-container-low border-r border-border-subtle">
+<div class="flex flex-col h-full p-6 space-y-4">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">business_center</span>
+</div>
+<div>
+<h1 class="font-headline-sm text-headline-sm font-extrabold text-primary">B4BC Connect</h1>
+<p class="text-label-sm text-on-surface-variant">Member Dashboard</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-all active:scale-95 duration-75" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-sm">My Dashboard</span>
+</a>
+<!-- ACTIVE STATE -->
+<a class="flex items-center gap-3 bg-primary-container text-on-primary-container rounded-lg px-4 py-3 border-l-4 border-primary active:scale-95 duration-75" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">handshake</span>
+<span class="font-label-sm">Find Partners</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant px-4 py-3 hover:bg-surface-container-high transition-all active:scale-95 duration-75" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-sm">Settings</span>
+</a>
+</nav>
+<div class="pt-4 mt-auto border-t border-border-subtle">
+<div class="flex items-center gap-3 p-3 bg-surface-container-lowest rounded-xl mb-4 border border-border-subtle">
+<img alt="Alex Harrison" class="w-10 h-10 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCAsKm6jcbHTiHontG2U2L4HwxNQ_mij9gKw0S_1DTbQzu2AY6hjpEw2RQcTRRwlAaHIot0e_zPjrmwVcER3HZLkVoUexI17jJrx7fZJcpBSgcylyN-9Rdzkkaiz69FZS2yTk9hbyYXYwSHZPL8RwJsjp6Uv9b9C7XmkP5_aWUGOgPHXvHzOa4JOv5ZY8guEDZiZKAFEZoTqinhdSdGY4smZaKSJIWlC1S-0QCocXK1RlJgTZSBJQpsLRjoVVJ1QKojWOPoTasYGt11"/>
+<div class="overflow-hidden">
+<p class="font-label-sm truncate">Alex Harrison</p>
+<p class="text-[10px] text-secondary">Pro Plan</p>
+</div>
+</div>
+<button class="w-full py-2.5 bg-primary text-white font-label-sm rounded-lg hover:bg-primary-container transition-colors active:scale-95 duration-75">
+                    Post Requirement
+                </button>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-[280px] min-h-screen">
+<!-- TopNavBar - Aligned with COMPONENTS_11 -->
+<header class="flex justify-between items-center w-full px-margin-desktop h-16 sticky top-0 z-50 bg-surface-container-lowest border-b border-border-subtle shadow-sm">
+<div class="flex items-center gap-4 flex-1">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-low border border-border-subtle rounded-lg text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none" placeholder="Search members, services, or locations..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4 ml-4">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined">mail</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden border border-border-subtle cursor-pointer active:opacity-80">
+<img alt="Member Profile Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9VMbh-Jnr3_xhq0RubDD83RzJIfNdZMG3VW-M6e9nRitG-kNRPbV2bkzg_sfV0kltTsu7SghT_H1w2iAffKP-o3PuSiAwTtR4QdFJ2a0YsRmHVgeFGo61SI5oh4tbbOog_ugpi9IYwxE7a8nInd_UBMOo-lgfOVELBfFxzReW93bVMDYjpv03lIETrlAGl0uZkXJLWNZHU34Xgm2xm3h3reOfuedq-2D-GmM2anHT_A0uRIkbNBRtjFl1cUVpNZnw0ppOrLECOXEF"/>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<div class="p-8 max-w-7xl mx-auto">
+<!-- Filter Status Bar - Standardized -->
+<div class="flex flex-wrap items-center justify-between mb-8 gap-4">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface mb-1">Partner Directory</h2>
+<div class="flex items-center gap-2">
+<span class="text-body-md text-secondary">Showing results for:</span>
+<span class="bg-primary/5 text-primary border border-primary/20 px-3 py-1 rounded-full text-label-sm font-semibold flex items-center gap-1">
+                            Industry: Professional Services
+                            <button class="material-symbols-outlined text-[14px] hover:text-primary-container">close</button>
+</span>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 px-4 py-2 bg-white border border-border-subtle rounded-lg text-body-md font-medium text-on-surface-variant hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+                        Filters
+                    </button>
+<div class="relative">
+<button class="flex items-center gap-2 px-4 py-2 bg-white border border-border-subtle rounded-lg text-body-md font-medium text-on-surface-variant hover:bg-surface-container-low transition-colors">
+                            Sort by: Relevance
+                            <span class="material-symbols-outlined text-[20px]">expand_more</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Directory Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+<!-- Card 1 -->
+<div class="bg-white p-6 rounded-xl border border-border-subtle group hover:border-primary/30 hover:shadow-lg transition-all duration-300">
+<div class="flex justify-between items-start mb-4">
+<div class="w-16 h-16 bg-surface-container-low rounded-xl flex items-center justify-center p-2 border border-border-subtle">
+<img alt="Strategy Co Logo" class="w-full h-full rounded-lg object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCekDiM9M-cvTl_gNY_ChHa7EaVBKu2cRz6hYaDJujyNh8Ujk9B3yr_np06sKnxbCHbJTYasmyQUZGWHKFTv7vJc8UhFv_efjfsXUPIsWvQ4-MXiVEi-0nsHqbLTqhwVAu_i0fl4Fo26NoJprI20pXHsRffqcwrKrve7LtpaMQk7nhxGeEo2QeVchXlOyFoZIJkdp7mhHYqxM-M57m1j1hJAkRhglxVxcYrlvCJhp8EQ3rl8g_wK0v3cTHv8ed-BMGiWAult9qkhSj3"/>
+</div>
+<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[12px] font-bold">98% Match</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-1 group-hover:text-primary transition-colors">Strategy Partners Ltd</h3>
+<div class="flex flex-wrap gap-2 mb-4">
+<span class="text-label-caps text-secondary bg-surface-container px-2 py-0.5 rounded">Consulting</span>
+<span class="text-label-caps text-secondary bg-surface-container px-2 py-0.5 rounded">FinOps</span>
+</div>
+<p class="text-body-md text-secondary mb-6 line-clamp-2">Providing high-impact business strategy and operational efficiency audits for scaling tech startups and SMEs.</p>
+<div class="flex items-center gap-3">
+<button class="flex-1 bg-primary text-white py-2.5 rounded-lg font-semibold hover:bg-primary-container transition-all active:scale-95">Connect</button>
+<button class="p-2.5 border border-border-subtle rounded-lg text-secondary hover:bg-surface-container-low hover:text-primary transition-all active:scale-95">
+<span class="material-symbols-outlined">bookmark</span>
+</button>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-white p-6 rounded-xl border border-border-subtle group hover:border-primary/30 hover:shadow-lg transition-all duration-300">
+<div class="flex justify-between items-start mb-4">
+<div class="w-16 h-16 bg-surface-container-low rounded-xl flex items-center justify-center p-2 border border-border-subtle">
+<img alt="Nexus Legal Logo" class="w-full h-full rounded-lg object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAWGrq-wxMFxvMWzlAUs2S9DOsaR_BPnCa_xoGPO8Ncalsh5TM4KZc6kCcOC5KfHxBHOlQgUTe_LLeKVp4Qdkt9-jqKzEKWERDrr8xGwbocf4Wm3WG3k1fGR-CKYv7QtM3aBkyhHC7i32vLyRCIPpZviXfhp7ZcZvdZX7q_rCcj6JVLRbvOHPKYPckjZKeqNrCs-C1-Vmm-5ed69PlMlf9aOqehwduJiWsy3XA3u-v1y3uciXAIOELo3lEBpAXOiI9eGgi5xNfSOJ6k"/>
+</div>
+<span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-[12px] font-bold">95% Match</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-1 group-hover:text-primary transition-colors">Nexus Legal Advisory</h3>
+<div class="flex flex-wrap gap-2 mb-4">
+<span class="text-label-caps text-secondary bg-surface-container px-2 py-0.5 rounded">Compliance</span>
+<span class="text-label-caps text-secondary bg-surface-container px-2 py-0.5 rounded">Contracts</span>
+</div>
+<p class="text-body-md text-secondary mb-6 line-clamp-2">Specialized legal services for modern businesses, focusing on IP protection, employment law, and compliance.</p>
+<div class="flex items-center gap-3">
+<button class="flex-1 bg-primary text-white py-2.5 rounded-lg font-semibold hover:bg-primary-container transition-all active:scale-95">Connect</button>
+<button class="p-2.5 border border-border-subtle rounded-lg text-secondary hover:bg-surface-container-low hover:text-primary transition-all active:scale-95">
+<span class="material-symbols-outlined">bookmark</span>
+</button>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-white p-6 rounded-xl border border-border-subtle group hover:border-primary/30 hover:shadow-lg transition-all duration-300">
+<div class="flex justify-between items-start mb-4">
+<div class="w-16 h-16 bg-surface-container-low rounded-xl flex items-center justify-center p-2 border border-border-subtle">
+<img alt="Creative Pulse Logo" class="w-full h-full rounded-lg object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuALubGcydVeT9zrmY8mBLL4NbFHLqv3vbxGJ-00Xncsdh0hA5yR3RRMFhB8WjtzhwB57R4IuzrZmdl994f30ddUsbABuctkDrqQeBssk4B1aDC6Isc97TbZp-v3mRbFV2Ln78U_qBdfZtA1RDvnOaIO9Mn7xqvMTpVAksAO3vJtpn3XLbDm_EmO6e2-vxFj4uag9FJgOLc54e5YrlNU_XcCOpC1LPxeQgaYomQgrmeMsOcxVPgY2-2dv5gI3mDtfE4WRWOcM_5Ch7Wi"/>
+</div>
+<span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[12px] font-bold">92% Match</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-1 group-hover:text-primary transition-colors">Pulse Marketing Agency</h3>
+<div class="flex flex-wrap gap-2 mb-4">
+<span class="text-label-caps text-secondary bg-surface-container px-2 py-0.5 rounded">Advertising</span>
+<span class="text-label-caps text-secondary bg-surface-container px-2 py-0.5 rounded">LeadGen</span>
+</div>
+<p class="text-body-md text-secondary mb-6 line-clamp-2">Full-stack digital marketing agency helping industrial and professional service companies scale through data.</p>
+<div class="flex items-center gap-3">
+<button class="flex-1 bg-primary text-white py-2.5 rounded-lg font-semibold hover:bg-primary-container transition-all active:scale-95">Connect</button>
+<button class="p-2.5 border border-border-subtle rounded-lg text-secondary hover:bg-surface-container-low hover:text-primary transition-all active:scale-95">
+<span class="material-symbols-outlined">bookmark</span>
+</button>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="bg-white p-6 rounded-xl border border-border-subtle group hover:border-primary/30 hover:shadow-lg transition-all duration-300">
+<div class="flex justify-between items-start mb-4">
+<div class="w-16 h-16 bg-surface-container-low rounded-xl flex items-center justify-center p-2 border border-border-subtle">
+<img alt="Cloud Sync Logo" class="w-full h-full rounded-lg object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAO32C0SkFvGUDGKre9pcGnzx1lpCvjR6VS4KjHHLahzFl9jedJBs6QnW5iV1zq5AbT1AFGkgp4DwejBR7KKCsDwSTn9LzFy63gu6KI1-5Ek-Jnqlq18FQKERXu9WPywGROml2oT5Rfh9dgdFXgt0UxrsjNNO-c6jNOPxQZnrdFRpJ0bB-YqTUFh67dujNEqyAtlYcPWqduxrltM_IONHZSpdDadxg8cOHjhT9U0ok0XvUEQszmh8g5esNKjOXFBV2piIpcsFSNYO3C"/>
+</div>
+<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[12px] font-bold">89% Match</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-1 group-hover:text-primary transition-colors">CloudSync IT Solutions</h3>
+<div class="flex flex-wrap gap-2 mb-4">
+<span class="text-label-caps text-secondary bg-surface-container px-2 py-0.5 rounded">Cybersecurity</span>
+<span class="text-label-caps text-secondary bg-surface-container px-2 py-0.5 rounded">Infra</span>
+</div>
+<p class="text-body-md text-secondary mb-6 line-clamp-2">Managed IT services and cybersecurity infrastructure for professional service firms requiring 24/7 security.</p>
+<div class="flex items-center gap-3">
+<button class="flex-1 bg-primary text-white py-2.5 rounded-lg font-semibold hover:bg-primary-container transition-all active:scale-95">Connect</button>
+<button class="p-2.5 border border-border-subtle rounded-lg text-secondary hover:bg-surface-container-low hover:text-primary transition-all active:scale-95">
+<span class="material-symbols-outlined">bookmark</span>
+</button>
+</div>
+</div>
+<!-- Card 5 -->
+<div class="bg-white p-6 rounded-xl border border-border-subtle group hover:border-primary/30 hover:shadow-lg transition-all duration-300">
+<div class="flex justify-between items-start mb-4">
+<div class="w-16 h-16 bg-surface-container-low rounded-xl flex items-center justify-center p-2 border border-border-subtle">
+<img alt="Talent Flow Logo" class="w-full h-full rounded-lg object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCAuuWvESKTmpnEvxS5AF19IQhXLTe8tdmAYbXNewJBPhyqs6VxX7iEaHSnZXuhPj3R5UA-kS_Klv2eRgav9M4N9Xgwdwnp3ld3j-UtBWqr0NxbbxHqtN7DrQC3EtyYBmGC6h0jeYbJY-eRHCztHljShctGR90GzoQjbwkeh8FByEvvYppCZq3S0_S4SJkQazafYB_OaoXF4lhqbl6_Sl_STUe2rFfcV4lKxWjnrBq3JGPmiFT88N_OQvSwz8VN6RsWIX8RdC5Ayty0"/>
+</div>
+<span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-[12px] font-bold">87% Match</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-1 group-hover:text-primary transition-colors">TalentFlow Search</h3>
+<div class="flex flex-wrap gap-2 mb-4">
+<span class="text-label-caps text-secondary bg-surface-container px-2 py-0.5 rounded">Recruitment</span>
+<span class="text-label-caps text-secondary bg-surface-container px-2 py-0.5 rounded">HR Tech</span>
+</div>
+<p class="text-body-md text-secondary mb-6 line-clamp-2">Premier executive search firm specializing in placing C-level talent within technology sectors.</p>
+<div class="flex items-center gap-3">
+<button class="flex-1 bg-primary text-white py-2.5 rounded-lg font-semibold hover:bg-primary-container transition-all active:scale-95">Connect</button>
+<button class="p-2.5 border border-border-subtle rounded-lg text-secondary hover:bg-surface-container-low hover:text-primary transition-all active:scale-95">
+<span class="material-symbols-outlined">bookmark</span>
+</button>
+</div>
+</div>
+<!-- Card 6 -->
+<div class="bg-white p-6 rounded-xl border border-border-subtle group hover:border-primary/30 hover:shadow-lg transition-all duration-300">
+<div class="flex justify-between items-start mb-4">
+<div class="w-16 h-16 bg-surface-container-low rounded-xl flex items-center justify-center p-2 border border-border-subtle">
+<img alt="Financial Core Logo" class="w-full h-full rounded-lg object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCBCgFT8Fpw2yu7vXBLKqmxmnVrtNDfGdwP-GSVgoFjISEUF6A8ZqVG3A50H7Aqjto5XCYBulW8hNZKauZ4ga6FEE7jZAVHWcCs3jeG8dk7GDBJYD-r37sLTtwe8lqByoDDsJD83z_J8D0zot-zIOmaxKA520whY-Tag0BV--BlvkBXCu5fj1L877PFkt-mIXt3S33NlGDprjGOf-3PK9Jsy-YyPvYw6GoRd3mK8gsoj_qgSypNhsX1sFkw-uZxXKejGeVj5QdO-yRQ"/>
+</div>
+<span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[12px] font-bold">85% Match</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-1 group-hover:text-primary transition-colors">Core Financial Systems</h3>
+<div class="flex flex-wrap gap-2 mb-4">
+<span class="text-label-caps text-secondary bg-surface-container px-2 py-0.5 rounded">Accounting</span>
+<span class="text-label-caps text-secondary bg-surface-container px-2 py-0.5 rounded">Audit</span>
+</div>
+<p class="text-body-md text-secondary mb-6 line-clamp-2">Modern accounting and financial planning for corporations, including cross-border tax advisory.</p>
+<div class="flex items-center gap-3">
+<button class="flex-1 bg-primary text-white py-2.5 rounded-lg font-semibold hover:bg-primary-container transition-all active:scale-95">Connect</button>
+<button class="p-2.5 border border-border-subtle rounded-lg text-secondary hover:bg-surface-container-low hover:text-primary transition-all active:scale-95">
+<span class="material-symbols-outlined">bookmark</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Footer Copyright -->
+<footer class="mt-12 py-8 text-center text-label-sm text-on-surface-variant">
+                © 2026 B4BC Connect Business Directory. All rights reserved.
+            </footer>
+</div>
+</main>
+<!-- Mobile Navigation -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-16 bg-surface border-t border-border-subtle md:hidden px-4 shadow-lg">
+<a class="flex flex-col items-center justify-center text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-[10px] font-medium">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary font-semibold" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">handshake</span>
+<span class="text-[10px] font-medium">Partners</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-medium">Settings</span>
+</a>
+</nav>
+</div>
+<script>
+    // Component interactions
+    document.querySelectorAll('button, a').forEach(el => {
+        el.addEventListener('mousedown', () => el.classList.add('scale-95'));
+        el.addEventListener('mouseup', () => el.classList.remove('scale-95'));
+        el.addEventListener('mouseleave', () => el.classList.remove('scale-95'));
+    });
+</script>
+</body></html>

@@ -1,7 +1,9 @@
 "use client";
 
-import { use, useMemo } from "react";
+import { use, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { startDirectConversationAction } from "@/app/actions/app-queries";
 import { useQuery } from "@tanstack/react-query";
 import {
   fetchIndustriesAction,
@@ -18,6 +20,9 @@ export default function MemberDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [isStartingChat, startChatTransition] = useTransition();
 
   const memberQ = useQuery({
     queryKey: ["member", id],
@@ -65,6 +70,19 @@ export default function MemberDetailPage({
 
   const title = m.company_name || m.contact_name || "Untitled";
   const about = m.description ?? m.business_nature;
+  const startChat = () => {
+    setChatError(null);
+    startChatTransition(() => {
+      void (async () => {
+        const result = await startDirectConversationAction({ memberId: m.id });
+        if (!result.ok || !result.conversationId) {
+          setChatError(result.error ?? "Unable to start chat.");
+          return;
+        }
+        router.push(`/messages?conversation=${result.conversationId}`);
+      })();
+    });
+  };
   const businessFacts = [
     { label: "Designation", value: m.designation },
     { label: "Sector", value: m.sector },
@@ -193,6 +211,19 @@ export default function MemberDetailPage({
                 <Icon name="mail" className="text-base" />
                 Email
               </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full"
+                onClick={startChat}
+                loading={isStartingChat}
+              >
+                <Icon name="chat" className="text-base" />
+                Message
+              </Button>
+              {chatError ? (
+                <p className="text-sm font-medium text-error">{chatError}</p>
+              ) : null}
             </CardBody>
           </Card>
 

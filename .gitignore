@@ -42,3 +42,7 @@ next-env.d.ts
 
 # Legacy DB dumps — contain member PII (emails, phones). Never commit.
 /scripts/output/
+
+# Deployment build artifacts
+/b4bc-deploy.zip
+*.zip

@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>My Dashboard | B4BC Connect</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-container": "#e0e3e6",
+                        "on-primary-container": "#adbcff",
+                        "text-muted": "#64748B",
+                        "outline-variant": "#c4c5d7",
+                        "surface-container-low": "#f3f2fe",
+                        "tertiary-fixed": "#ffdbd2",
+                        "tertiary": "#6d1600",
+                        "secondary-fixed": "#e0e3e6",
+                        "on-secondary": "#ffffff",
+                        "surface-bright": "#fbf8ff",
+                        "on-secondary-fixed": "#191c1e",
+                        "on-tertiary-fixed": "#3c0800",
+                        "tertiary-container": "#952301",
+                        "on-surface-variant": "#434654",
+                        "on-background": "#1a1b23",
+                        "primary-fixed-dim": "#b7c4ff",
+                        "primary": "#002b92",
+                        "border-subtle": "#E2E8F0",
+                        "surface-blue": "#0037B0",
+                        "inverse-surface": "#2f3039",
+                        "surface-container-high": "#e8e7f3",
+                        "on-secondary-fixed-variant": "#44474a",
+                        "on-primary-fixed": "#001452",
+                        "surface-variant": "#e2e1ed",
+                        "on-primary-fixed-variant": "#0038b6",
+                        "on-primary": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-container": "#ffaa94",
+                        "inverse-on-surface": "#f0f0fb",
+                        "surface": "#fbf8ff",
+                        "on-tertiary-fixed-variant": "#891f00",
+                        "surface-tint": "#2551d8",
+                        "inverse-primary": "#b7c4ff",
+                        "tertiary-fixed-dim": "#ffb4a1",
+                        "surface-container-lowest": "#ffffff",
+                        "on-surface": "#1a1b23",
+                        "primary-container": "#003ec7",
+                        "outline": "#747686",
+                        "secondary-fixed-dim": "#c4c7ca",
+                        "surface-container": "#ededf8",
+                        "surface-dim": "#d9d9e4",
+                        "on-secondary-container": "#616567",
+                        "error-container": "#ffdad6",
+                        "on-error-container": "#93000a",
+                        "background": "#fbf8ff",
+                        "primary-fixed": "#dde1ff",
+                        "error": "#ba1a1a",
+                        "on-error": "#ffffff",
+                        "secondary": "#5b5f61",
+                        "surface-container-highest": "#e2e1ed"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "16px",
+                        "gutter": "24px",
+                        "unit": "4px",
+                        "margin-desktop": "32px",
+                        "max-width": "1280px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #E2E8F0;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-[280px] bg-surface-container-low dark:bg-on-background border-r border-border-subtle dark:border-outline-variant flex flex-col h-full p-6 space-y-4 z-50">
+<div class="mb-8">
+<h1 class="font-headline-sm text-headline-sm font-extrabold text-primary dark:text-primary-fixed-dim">B4BC Connect</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Member Dashboard</p>
+</div>
+<nav class="flex-1 space-y-2">
+<!-- Active Navigation -->
+<a class="flex items-center gap-3 bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary rounded-lg px-4 py-3 border-l-4 border-primary hover:bg-surface-container-high transition-all active:scale-95 duration-75" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-sm text-label-sm">My Dashboard</span>
+</a><a class="flex items-center gap-3 text-on-surface-variant dark:text-surface-variant px-4 py-3 hover:bg-surface-container-high dark:hover:bg-secondary-container transition-all active:scale-95 duration-75" href="#">
+<span class="material-symbols-outlined">rss_feed</span>
+<span class="font-label-sm text-label-sm">Public Feed</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant dark:text-surface-variant px-4 py-3 hover:bg-surface-container-high dark:hover:bg-secondary-container transition-all active:scale-95 duration-75" href="{{DATA:SCREEN:SCREEN_44}}">
+<span class="material-symbols-outlined" data-icon="handshake">handshake</span>
+<span class="font-label-sm text-label-sm">Find Partners</span>
+</a><a class="flex items-center gap-3 text-on-surface-variant dark:text-surface-variant px-4 py-3 hover:bg-surface-container-high dark:hover:bg-secondary-container transition-all active:scale-95 duration-75" href="#">
+<span class="material-symbols-outlined">chat</span>
+<span class="font-label-sm text-label-sm">Messages</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant dark:text-surface-variant px-4 py-3 hover:bg-surface-container-high dark:hover:bg-secondary-container transition-all active:scale-95 duration-75" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-sm text-label-sm">Settings</span>
+</a>
+</nav>
+<div class="pt-6 border-t border-border-subtle">
+<button class="w-full bg-primary text-on-primary font-label-sm text-label-sm py-3 rounded-lg mb-6 shadow-sm hover:opacity-90 transition-opacity">
+                Post Requirement
+            </button>
+<div class="space-y-1">
+<a class="flex items-center gap-3 text-on-surface-variant dark:text-surface-variant px-4 py-3 hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="font-label-sm text-label-sm">Help Center</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant dark:text-surface-variant px-4 py-3 hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-label-sm text-label-sm">Logout</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 ml-[280px]">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center w-full px-margin-desktop h-16 sticky top-0 z-40 bg-surface-container-lowest dark:bg-inverse-surface border-b border-border-subtle dark:border-outline-variant shadow-sm">
+<div class="flex items-center gap-8">
+<div class="relative w-96">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" data-icon="search">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container rounded-full border-none focus:ring-2 focus:ring-primary font-body-md text-body-md" placeholder="Search for partners or requirements..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4">
+<button class="relative text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-0 right-0 block h-2 w-2 rounded-full bg-error ring-2 ring-white"></span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="mail">mail</span>
+</button>
+</div>
+<div class="h-8 w-px bg-border-subtle"></div>
+<div class="flex items-center gap-3 cursor-pointer">
+<img alt="Member Profile Avatar" class="h-8 w-8 rounded-full bg-primary-fixed object-cover" data-alt="A professional headshot of a corporate executive in a modern office environment. The person is smiling confidently, wearing a sharp navy blue blazer over a crisp white shirt. The background is a soft-focus business lounge with glass partitions and subtle blue accents, following a clean, light-mode dashboard aesthetic. High-quality corporate photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7xuooNDVYvchKCLAS7ILuETQNR-asgpBBkEGcKyCd79y7h77Xn1JJqANxdrRLsECKHtdP502_Woqwg74D_W5wLXOWcXvGnv9OrbZKklss5cV74SW4EKFNgYTOKW6f1PqyqIvR_Llgz3weF9cg7kDr3OM8yYN1QxgDZ9wCtaZFAc9mkbHblZcKxYJcvByVctv-kNRhpRAIvb1X7CMyjLm0E2DkLnDM0pvKs-cAg23so-6Ss6v4FrK4UzIUYDU64-sHcrbvJlaZHpSS"/>
+<div class="hidden lg:block text-left">
+<p class="font-label-sm text-label-sm font-bold text-on-surface">Alex Rivera</p>
+<p class="font-label-sm text-[10px] text-on-surface-variant">Logistics Director</p>
+</div>
+</div>
+</div>
+</header>
+<!-- Content Canvas -->
+<div class="p-margin-desktop space-y-gutter">
+<!-- Welcome Header -->
+<div class="flex justify-between items-end">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-primary">Good Morning, Alex</h2>
+<p class="font-body-lg text-body-lg text-text-muted">Here's what's happening with your business network today.</p>
+</div>
+<div class="flex items-center gap-2 text-text-muted font-label-sm">
+<span class="material-symbols-outlined text-[18px]" data-icon="calendar_today">calendar_today</span>
+                    October 24, 2023
+                </div>
+</div>
+<!-- Stats & Post Requirement Section -->
+<div class="bento-grid">
+<!-- Post Requirement Card -->
+<div class="col-span-8 bg-surface-container-lowest border border-border-subtle rounded-xl p-8 shadow-sm">
+<div class="flex items-center gap-3 mb-6">
+<div class="bg-primary-container/10 p-2 rounded-lg">
+<span class="material-symbols-outlined text-primary" data-icon="campaign">campaign</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm">Post a New Requirement</h3>
+</div>
+<div class="relative">
+<textarea class="w-full p-6 bg-surface-container-low border border-border-subtle rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all resize-none font-body-md text-body-md placeholder:text-text-muted" placeholder="What are you looking for? (e.g., 'Seeking a sustainable packaging supplier for Q1 rollout in Europe')" rows="4"></textarea>
+<div class="absolute bottom-4 right-4 flex items-center gap-4">
+<button class="text-primary font-label-sm text-label-sm px-4 py-2 hover:bg-primary-fixed rounded-lg transition-colors">Add Documents</button>
+<button class="bg-primary text-white font-label-sm text-label-sm px-6 py-2 rounded-lg shadow-md hover:bg-primary-container transition-all">Submit Post</button>
+</div>
+</div>
+</div>
+<!-- Quick Stats Column -->
+<div class="col-span-4 flex flex-col gap-6">
+<div class="bg-surface-blue text-white rounded-xl p-6 shadow-lg relative overflow-hidden group">
+<div class="relative z-10">
+<p class="font-label-caps text-label-caps opacity-80 uppercase tracking-wider mb-2">Total Matches Found</p>
+<div class="flex items-end gap-2">
+<span class="font-headline-lg text-4xl">124</span>
+<span class="font-label-sm text-label-sm text-green-300 mb-1 flex items-center">
+<span class="material-symbols-outlined text-[16px]" data-icon="trending_up">trending_up</span> +12%
+                                </span>
+</div>
+</div>
+<span class="material-symbols-outlined absolute -right-4 -bottom-4 text-white/10 text-9xl rotate-12 group-hover:rotate-0 transition-transform duration-500" data-icon="handshake" style="font-variation-settings: 'FILL' 1;">handshake</span>
+</div>
+<div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-6 shadow-sm flex items-center justify-between">
+<div>
+<p class="font-label-caps text-label-caps text-text-muted mb-1">ACTIVE REQUIREMENTS</p>
+<p class="font-headline-sm text-headline-sm text-primary">08</p>
+</div>
+<div class="h-12 w-12 rounded-full bg-tertiary-fixed flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary" data-icon="assignment_late">assignment_late</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-6 shadow-sm flex items-center justify-between">
+<div>
+<p class="font-label-caps text-label-caps text-text-muted mb-1">PARTNER REQUESTS</p>
+<p class="font-headline-sm text-headline-sm text-primary">15</p>
+</div>
+<div class="h-12 w-12 rounded-full bg-primary-fixed flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-fixed-variant" data-icon="group_add">group_add</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Recent Matches / Matching Profiles Section -->
+<section class="space-y-6">
+<div class="flex justify-between items-center">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Recommended Partners for Your Current Needs</h3>
+<a class="text-primary font-label-sm text-label-sm flex items-center gap-1 hover:underline" href="#">
+                        View All Partners <span class="material-symbols-outlined text-[16px]" data-icon="arrow_forward">arrow_forward</span>
+</a>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Partner Card 1 -->
+<div class="bg-surface-container-lowest border border-border-subtle rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
+<div class="h-32 bg-primary-container relative">
+<img alt="Company Banner" class="w-full h-full object-cover opacity-40" data-alt="A cinematic wide-angle shot of a high-tech automated warehouse with orange robotic arms moving parcels. The scene is bathed in cool blue and white industrial lighting, conveying efficiency and advanced logistics technology. The style is clean, sharp, and professional, perfectly suited for a corporate B2B dashboard header." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCenXUwfl_5jIll8z-Mf9jTW1x7jlbMSGFYNbARMPg8po5ZNJnyl4KUZ19KHimrQE4NZumDbS3GJ-gOMf2qfq65snF-Pw8Lopehgd5REZB12xVHd7iml56Ma78LT9ub1O35nw69rSOdpftJEQljlZjrAKMAOY8OIAxfEw_PsBLMOqn8kggY5m16p5ZVIGef1x_TtcShj9V58VDAKB3cAbqIkXsK7JCSzuVXza80f0iKNYLht7CCr9Xvn-JhwAumrgjVEpQkA3DkoHNQ"/>
+<div class="absolute -bottom-6 left-6 h-16 w-16 rounded-xl bg-white p-2 shadow-md border border-border-subtle">
+<img alt="Partner Logo" class="w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBumCshjnKOquKLQo5ZLv7a8w_X2cU6EcjaFPA8qtgSfGcxa66ZFMe7kV6RVUdDHxvrO_5Q7coIC9H3Mf6JbS-qCRrORGe5MrWyE-2JRaaCYA4rK930sKWIVt5aJ0AJYP_4T0JeyHV9GD_d4kLheuWdDHD0uTonk7l3JQoMgXKhOcucMBTHfbj6hvVJT5go2lm1nVWHVdlb1YFmopR8_Stmj8_1gXCAQyd1rKydSWGAha_HkXqqDTyOhjbkuRG8ZFHkOsoDC8UkrEsV"/>
+</div>
+</div>
+<div class="pt-10 p-6 space-y-4">
+<div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors">Lumina Logistics Co.</h4>
+<p class="font-label-sm text-label-sm text-text-muted uppercase tracking-tight">Global Supply Chain Solutions</p>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 bg-surface-container-high text-on-surface-variant font-label-sm text-[10px] rounded-md">Logistics</span>
+<span class="px-2 py-1 bg-surface-container-high text-on-surface-variant font-label-sm text-[10px] rounded-md">Northern Zone</span>
+<span class="px-2 py-1 bg-green-100 text-green-700 font-label-sm text-[10px] rounded-md font-bold">98% Match</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">Specializing in cold-chain and express transit across the Northern Territory with a fleet of over 200 electric vehicles.</p>
+<div class="flex items-center gap-3 pt-2">
+<button class="flex-1 bg-primary text-white font-label-sm text-label-sm py-2 rounded-lg hover:bg-primary-container transition-colors">Connect</button>
+<button class="p-2 border border-border-subtle rounded-lg hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="bookmark">bookmark</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Partner Card 2 -->
+<div class="bg-surface-container-lowest border border-border-subtle rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
+<div class="h-32 bg-tertiary-container relative">
+<img alt="Company Banner" class="w-full h-full object-cover opacity-40" data-alt="A clean, minimalist 3D rendering of a stylized world map with glowing interconnected nodes and data streams. The lighting is bright and airy with soft shadows, using a palette of white and professional blue. This represents global connectivity and international trade in a sleek, modern corporate visual language." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCIRsaU-HzyHqHMvKsfLlFyRygK71_jB3LUufQn_ThmOwxnKpPfkhaQALvxYuA8hBC0CBHZDEnI6GvbTlRqdcluJG0fEszE9eUx9R_blFFUlrHHCqziN4jbW0VUJQTpkY6Rh0s1i4wJgaBdJnR0Ah9APZkOpFUMwV1WVmgCDAQr2FQcg3p5zTPM4HYEMJC6Tww3jPyAHA6sBQl7mq1ZTMmfriDjxWocwL2dk-W8FuXJvfnbTPVnKcm47wCQq9YcCOQYYQukq5BZRqnu"/>
+<div class="absolute -bottom-6 left-6 h-16 w-16 rounded-xl bg-white p-2 shadow-md border border-border-subtle">
+<img alt="Partner Logo" class="w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAhZ2yxbIcJ628sCbnme2iJ7AzEntlsSDHeQ-wBnOAnz0pakKY7KuWsLkVegVyg5sSA3edgLKZGiJ1H5-UtMpY3bAIjXSr9LovREBQa_wlWwZrCPjkVzQ0lNiBd9ojzCiIpQc7bn0xnpl_IgiXC7DYv3oH_e804E34R3wc-w-XxEnB1IZqJDOdot40n2rD4Q0caW2_fp7xYLxzqmcsvMhFwRbWczg33a8aXJCHP2fXUcDkqVb1UKj64aXOrRC_BJTZlX6i6wp4KK2BF"/>
+</div>
+</div>
+<div class="pt-10 p-6 space-y-4">
+<div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors">Nexus Trade Group</h4>
+<p class="font-label-sm text-label-sm text-text-muted uppercase tracking-tight">Trade Finance &amp; Customs</p>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 bg-surface-container-high text-on-surface-variant font-label-sm text-[10px] rounded-md">Finance</span>
+<span class="px-2 py-1 bg-surface-container-high text-on-surface-variant font-label-sm text-[10px] rounded-md">International</span>
+<span class="px-2 py-1 bg-green-100 text-green-700 font-label-sm text-[10px] rounded-md font-bold">92% Match</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">Leading specialists in cross-border trade compliance and innovative supply chain financing for emerging markets.</p>
+<div class="flex items-center gap-3 pt-2">
+<button class="flex-1 bg-primary text-white font-label-sm text-label-sm py-2 rounded-lg hover:bg-primary-container transition-colors">Connect</button>
+<button class="p-2 border border-border-subtle rounded-lg hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="bookmark">bookmark</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Partner Card 3 -->
+<div class="bg-surface-container-lowest border border-border-subtle rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
+<div class="h-32 bg-secondary text-white relative">
+<img alt="Company Banner" class="w-full h-full object-cover opacity-40" data-alt="A sophisticated architectural photograph of a modern server room or data center. Rows of sleek server racks with blinking blue lights are set against a clean, white, futuristic corridor. The image exudes trust, security, and high-performance technology, using a professional monochromatic and blue-tinted color scheme." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBzVpgRW82RQpl99Yo4tzeQsQrAWc7sqQzgup8HWVhHNbG1KlxEToDBt1KSMACe_xZJAfo-4HbaVuP96kGISUv2CMQCz68WQ_NDVSPHMN-trV_GEP6-okZpQQctJUtzEsmPY-4J-FnEeSYWmplTe5ThZU0Vg3gKegRxpHa_11CRMQtB0n_fteRYqlU6Fs72z0y0QGOJuKcQ4q7PbwEMksH3HEFYit0gJyqmewQcHjJ0xIW3hdJWW9oDEjHVHK1tEPPJmbtX8-1YPInq"/>
+<div class="absolute -bottom-6 left-6 h-16 w-16 rounded-xl bg-white p-2 shadow-md border border-border-subtle">
+<img alt="Partner Logo" class="w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAaLKcIDFXtJFXxyKt-zxSZIJPdHWKmWjj3otVfr5YEiLuLco_xYbdYvxu2mEB4QK9UEOW8IMDaTGoZrYh7-8OKTYghONXE256KGGCWdJVlLPa6gdJVEhgZRDeOdkPwBIrxbUxjExvVdmRm36x2YU_t3RZtsUOYNqy0PowUgyrQTEs68IjYGnC4nw9hvw8Ui72JQ3R0MVQE6_uuf1EJRkZGNupVYWHqFja7yxZKA7R28INcItqfLkBmQnHtWQtB_HI5ViZmtaW5uUD0"/>
+</div>
+</div>
+<div class="pt-10 p-6 space-y-4">
+<div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface group-hover:text-primary transition-colors">Secure Systems Ltd</h4>
+<p class="font-label-sm text-label-sm text-text-muted uppercase tracking-tight">Enterprise Cybersecurity</p>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 bg-surface-container-high text-on-surface-variant font-label-sm text-[10px] rounded-md">IT Security</span>
+<span class="px-2 py-1 bg-surface-container-high text-on-surface-variant font-label-sm text-[10px] rounded-md">Enterprise</span>
+<span class="px-2 py-1 bg-green-100 text-green-700 font-label-sm text-[10px] rounded-md font-bold">89% Match</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">Providing military-grade protection for corporate supply chains and sensitive business communications.</p>
+<div class="flex items-center gap-3 pt-2">
+<button class="flex-1 bg-primary text-white font-label-sm text-label-sm py-2 rounded-lg hover:bg-primary-container transition-colors">Connect</button>
+<button class="p-2 border border-border-subtle rounded-lg hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="bookmark">bookmark</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Activity / Tips Asymmetric Section -->
+<div class="grid grid-cols-12 gap-6 pb-margin-desktop">
+<div class="col-span-12 lg:col-span-7 bg-surface-container-low rounded-xl p-8 border border-border-subtle">
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-6">Recent Network Activity</h3>
+<div class="space-y-6"><div class="flex gap-4">
+<img alt="Rajagopalan" class="h-10 w-10 rounded-full shrink-0 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCPQUus9Jw50LMOseod6lsIbf8hOeiptnOjdHqT5EDrw6Y7OmNVvK7PHrovXl9OYpjgrXtT6GoFzYgLZrV3mnlb5IoeSmsApc623rmHo-sczIfwpz3pDfnQHpvTtb8nWmzSJja73ytuldiA1dxugTSXjPI--bBvwJPL5-KKelDom8QWn74zK8-JHWMt1IbBfpRDpWxQFPVsBrAxAJPzrOlUCCvMFOjfvAEXgB2lr4M5kuVsfwSBd7jv2CyC5xw-2uBouVTP6Ed3N1ET"/>
+<div>
+<p class="font-body-md text-body-md text-on-surface"><strong>Rajagopalan</strong> requested for software development services</p>
+<p class="font-label-sm text-label-sm text-text-muted">5 minutes ago</p>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="h-10 w-10 rounded-full bg-primary-fixed shrink-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[18px]" data-icon="person_search">person_search</span>
+</div>
+<div>
+<p class="font-body-md text-body-md text-on-surface"><strong>Sarah Chen</strong> viewed your logistics requirement</p>
+<p class="font-label-sm text-label-sm text-text-muted">2 hours ago</p>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="h-10 w-10 rounded-full bg-tertiary-fixed shrink-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary text-[18px]" data-icon="handshake">handshake</span>
+</div>
+<div>
+<p class="font-body-md text-body-md text-on-surface">You matched with <strong>Lumina Logistics Co.</strong></p>
+<p class="font-label-sm text-label-sm text-text-muted">Yesterday at 4:30 PM</p>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="h-10 w-10 rounded-full bg-secondary-fixed shrink-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary-container text-[18px]" data-icon="rate_review">rate_review</span>
+</div>
+<div>
+<p class="font-body-md text-body-md text-on-surface">New endorsement received from <strong>Global Trade Hub</strong></p>
+<p class="font-label-sm text-label-sm text-text-muted">Oct 22, 2023</p>
+</div>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-5 glass-card rounded-xl p-8 flex flex-col justify-between">
+<div>
+<div class="bg-primary/10 w-fit p-3 rounded-full mb-6">
+<span class="material-symbols-outlined text-primary" data-icon="lightbulb">lightbulb</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-4">Quick Tip: Maximize Visibility</h3>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed mb-6">
+                            Members with a verified business profile receive 4x more engagement. Ensure your "About Us" section and "Core Services" are up-to-date to improve matching accuracy.
+                        </p>
+</div>
+<button class="w-full border-2 border-primary text-primary font-label-sm text-label-sm py-3 rounded-lg hover:bg-primary hover:text-white transition-all font-bold">
+                        Optimize My Profile
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Success Feedback Overlay (Hidden by default) -->
+<div class="fixed bottom-10 right-10 transform translate-y-20 opacity-0 bg-primary text-white px-6 py-4 rounded-xl shadow-2xl transition-all duration-500 z-[100] flex items-center gap-3" id="success-toast">
+<span class="material-symbols-outlined" data-icon="check_circle">check_circle</span>
+<span class="font-body-md text-body-md">Requirement posted successfully!</span>
+</div>
+<script>
+        // Micro-interaction for post submission
+        const postTextarea = document.querySelector('textarea');
+        const submitBtn = document.querySelector('button:contains("Submit Post")') || document.querySelectorAll('button')[2]; 
+        const toast = document.getElementById('success-toast');
+
+        // Note: Using the specific button by index as 'contains' isn't native vanilla JS
+        const buttons = document.querySelectorAll('button');
+        let submitPostBtn;
+        buttons.forEach(btn => {
+            if(btn.innerText.includes('Submit Post')) submitPostBtn = btn;
+        });
+
+        if (submitPostBtn) {
+            submitPostBtn.addEventListener('click', () => {
+                if(postTextarea.value.trim() === "") {
+                    postTextarea.classList.add('ring-2', 'ring-error');
+                    setTimeout(() => postTextarea.classList.remove('ring-2', 'ring-error'), 2000);
+                    return;
+                }
+                
+                submitPostBtn.disabled = true;
+                submitPostBtn.innerHTML = '<span class="material-symbols-outlined animate-spin" data-icon="progress_activity">progress_activity</span>';
+                
+                setTimeout(() => {
+                    postTextarea.value = "";
+                    submitPostBtn.disabled = false;
+                    submitPostBtn.innerHTML = 'Submit Post';
+                    
+                    toast.classList.remove('translate-y-20', 'opacity-0');
+                    setTimeout(() => {
+                        toast.classList.add('translate-y-20', 'opacity-0');
+                    }, 4000);
+                }, 1200);
+            });
+        }
+    </script>
+</body></html>

@@ -1,10 +1,19 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySession } from "@/lib/session";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/directory", "/profile"];
+const PROTECTED_PREFIXES = [
+  "/dashboard",
+  "/directory",
+  "/feed",
+  "/find-partners",
+  "/messages",
+  "/notifications",
+  "/profile",
+  "/settings",
+];
 const AUTH_PATHS = ["/login"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   const session = await verifySession(token);

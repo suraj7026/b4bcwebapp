@@ -53,6 +53,11 @@ export interface DirectoryMember {
   created_at: string;
 }
 
+export interface PartnerRecommendation extends DirectoryMember {
+  match_percent: number;
+  matched_terms: string[];
+}
+
 export interface DashboardStats {
   totalMembers: number;
   industries: Array<{

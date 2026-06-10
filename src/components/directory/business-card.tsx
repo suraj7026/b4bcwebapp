@@ -102,6 +102,7 @@ export function BusinessCard({
             ) : null}
             <Link
               href={`/directory/${business.id}`}
+              prefetch={false}
               className="flex items-center gap-1 text-sm font-medium text-primary hover:underline"
             >
               View

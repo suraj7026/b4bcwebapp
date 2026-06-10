@@ -8,7 +8,6 @@ const required = (name: string) => {
 };
 
 declare global {
-  // eslint-disable-next-line no-var
   var __mysqlPool: mysql.Pool | undefined;
 }
 

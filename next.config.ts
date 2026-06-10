@@ -40,13 +40,15 @@ if (process.platform === "win32") {
 const nextConfig: NextConfig = {
   output: "standalone",
 
-  eslint: { ignoreDuringBuilds: true },
-
   serverExternalPackages: ["jose"],
 
   experimental: {
     workerThreads: false,
     cpus: 1,
+    staleTimes: {
+      dynamic: 60,
+      static: 300,
+    },
   },
 
   webpack: (config) => {

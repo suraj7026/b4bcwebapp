@@ -30,7 +30,7 @@ export function Logo({
         backgroundColor: accent ?? "#0052ff",
         fontSize: Math.max(12, Math.floor(size / 3)),
         fontWeight: 600,
-        letterSpacing: "0.04em",
+        letterSpacing: 0,
       }}
     >
       <span>{initialsFromName(label)}</span>

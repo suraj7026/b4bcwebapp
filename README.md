@@ -1,181 +1,234 @@
 # B4BC Connect — Business Directory Webapp
 
-Next.js 16 + Supabase webapp for the B4BC business directory. No separate
-backend — the Next.js app talks straight to Supabase (Postgres + Auth +
-Row-Level Security) using the publishable key on the client and the
-service-role secret in scripts.
+B4BC Connect is a member-only business directory for B4BC. It lets members sign
+in, browse active businesses, filter by industry or zone, view business
+profiles, inspect their own read-only member record, post public requirements,
+and view member feed/messaging workflows.
+
+This README describes the current implementation in this repository.
 
 ## Stack
-- **Framework**: Next.js 16 (App Router, React 19, Turbopack)
-- **Backend**: Supabase (Postgres + Auth + RLS + Storage)
-- **Auth**: Email + password through Supabase Auth; admin / zone-user /
-  member roles encoded in `app_metadata`
+
+- **Framework**: Next.js 16 App Router, React 19
+- **Directory and auth data**: Legacy Hostinger/MySQL database via
+  `mysql2/promise`
+- **App workflow data**: PostgreSQL via `pg`
+- **Auth**: Custom email-or-phone member lookup plus signed JWT cookie
+- **Session**: HTTP-only `b4bc_session` cookie signed with `SESSION_SECRET`
 - **State**: TanStack Query v5
-- **Styling**: Tailwind CSS v4, design tokens from the Stitch "B4BC Connect
-  Business Directory" project (Inter, `#003ec7` primary, Lucide icons)
+- **Styling**: Tailwind CSS v4, Inter, Lucide icons, local UI components
+- **Deployment**: Plesk/Phusion Passenger compatible `app.js`, standalone Next
+  output
 
 ## Architecture
+
+```text
+[ Browser ]
+    |
+    v
+[ Next.js app ]
+    |-- proxy verifies b4bc_session
+    |-- server actions read/write cookies and query data
+    |-- MySQL reads member identity and directory data
+    |-- PostgreSQL reads/writes app workflow data
+    |
+    |--> [ Legacy MySQL ]
+    |-- b4b_members
+    |-- b4b_industry_segments
+    |-- b4b_zones
+    |-- b4b_chapters
+    |
+    |--> [ PostgreSQL: b4bc_app schema ]
+    |-- requirements / responses / comments / reactions
+    |-- saved partners / partner connections
+    |-- conversations / participants / messages
+    |-- member profiles / preferences / notifications
 ```
-[ Browser ] ──► b4bcwebapp (Next.js on Vercel)
-                  │ @supabase/supabase-js
-                  ▼
-            Supabase project
-            ├─ Postgres  (industries, zones, members, favorites, reports, …)
-            ├─ Auth      (admin / zone_user / member)
-            ├─ Storage   (optional — currently linking external logos)
-            └─ RLS       (admin → all, zone_user → own zone, member → self)
-```
+
+There is no separate API server. The Next.js app queries MySQL from server-only
+code for member identity and directory records, and queries PostgreSQL from
+server-only code for feed, chat, network, notification, and requirement data.
 
 ## Routes
-- `/login` — Supabase email/password sign-in.
-- `/signup` — Supabase email/password account creation.
-- `/reset-password` — Supabase password recovery completion.
-- `/dashboard` — totals + industry tiles.
-- `/directory` — paginated, searchable directory with industry/zone/sort
-  filters; `keepPreviousData` for smooth refetches; pagination via offset.
-- `/directory/[id]` — full business profile, contact actions, favorite +
-  report flows.
-- `/favorites` — saved members.
-- `/profile` — current user info; for `role=member`, an inline edit form on
-  the linked `members` row.
-- `/privacy` — schedule deletion + request export.
 
-## Supabase
+- `/` — redirects signed-in users to `/directory`, otherwise `/login`.
+- `/login` — signs in with the email address or phone number on a B4BC member
+  record.
+- `/directory` — merged member home with totals, industry tiles, requirement
+  composer, and a paginated/searchable directory with industry, zone, and sort
+  filters.
+- `/dashboard` — redirects to `/directory` for old links.
+- `/directory/[id]` — full business profile and contact actions.
+- `/feed` — public requirements feed backed by PostgreSQL.
+- `/messages` — member messaging interface backed by PostgreSQL.
+- `/notifications` — member notification list backed by PostgreSQL.
+- `/profile` — read-only view of the signed-in member record.
+- `/settings` — app-owned profile settings and notification preferences.
 
-### Schema
-SQL lives in [`supabase/migrations/`](supabase/migrations). Apply with:
-```bash
-psql "$LEGACY_DATABASE_URL" -f supabase/migrations/20260526120000_init.sql
-psql "$LEGACY_DATABASE_URL" -f supabase/migrations/20260526120100_rls.sql
-```
-…or paste them into the Supabase SQL editor in the dashboard.
+Protected routes are `/dashboard`, `/directory`, `/feed`, `/messages`,
+`/notifications`, `/profile`, and `/settings`.
 
-Tables (all under `public`):
-- `industries`, `zones` — reference data.
-- `members` — primary business listing. `user_id` FKs to `auth.users` so a
-  member account can edit its own row.
-- `favorites` — `(user_id, member_id)` bookmarks.
-- `reports` — moderation queue.
-- `user_deletion_requests`, `user_exports` — GDPR-ish actions.
+## Authentication
 
-Plus a `directory_members` view that denormalises industry + zone for cheap
-read-side joins.
+Login is handled by `src/app/actions/auth.ts`.
 
-### RLS
-Roles + zone live in `auth.users.app_metadata`:
-```jsonc
-{ "role": "admin" }                       // sees everything
-{ "role": "zone_user", "zone": "WEST" }   // sees only WEST members
-{ "role": "member" }                      // sees all active members; edits own row
-```
-Policies in [`20260526120100_rls.sql`](supabase/migrations/20260526120100_rls.sql).
-Self-serve signups are defaulted to `{ "role": "member" }` by an Auth trigger
-so RLS can trust the role claim after email/password signup.
+1. The user enters an email address or phone number.
+2. The app looks for an active row in `b4b_members`.
+3. If found, the app signs a JWT containing `memberId`.
+4. The token is stored in the HTTP-only `b4bc_session` cookie.
 
-### Migration from the old Django Postgres
-[`scripts/migrate-from-legacy.ts`](scripts/migrate-from-legacy.ts) reads from
-the legacy `b4b_members` / `b4b_industry_segments` tables and:
-1. Upserts industries (creates 1 row per unique `segment_name`).
-2. Upserts `public.zones` (idempotent).
-3. Upserts `public.members` keyed by `legacy_member_id` (re-runs safely).
-4. Creates a Supabase Auth user for every member with a valid email and
-   captures a recovery link in `scripts/output/member-reset-links.csv`.
-5. Creates the admin + zone-operator accounts
-   (`admin@b4bc.org`, `west@b4bc.org`, etc.) with `app_metadata` set and
-   logs their recovery links to `scripts/output/operator-reset-links.csv`.
-6. Anything we couldn't migrate ends up in `scripts/output/skipped.csv`.
+There is currently no password flow, signup flow, role model, or admin UI in
+this implementation.
 
-Run it:
-```bash
-# In .env.local:
-# NEXT_PUBLIC_SUPABASE_URL=...
-# SUPABASE_SECRET_KEY=...           ← the service_role key
-# LEGACY_DATABASE_URL=postgres://... (the old b4bc_api DB)
+## Data Access
 
-npx tsx scripts/migrate-from-legacy.ts
+MySQL access lives in `src/lib/mysql.ts`. It remains the source for member
+identity, login, directory listings, industry segments, zones, and chapters.
+
+Required tables:
+
+- `b4b_members`
+- `b4b_industry_segments`
+- `b4b_zones`
+- `b4b_chapters`
+
+Active members are filtered as:
+
+```sql
+date_of_exit IS NULL OR date_of_exit = '0000-00-00'
 ```
 
-### Migration from a phpMyAdmin JSON export
-For the `b4bc_members.json` export, import the app-facing directory data with:
-```bash
-npm run import:json -- /path/to/b4bc_members.json
-npx tsx scripts/create-operators.ts
-```
+The legacy data often has a missing `b4b_members.industry` value, so the app
+derives an industry id from `business_area` and `service_provided`. That logic
+is centralized in `DERIVED_INDUSTRY_SQL` in `src/lib/mysql.ts`.
 
-The JSON importer maps `b4b_members`, `b4b_zones`, and member industries into
-the Supabase schema used by the app. Operator reset links are written to
-`scripts/output/operator-reset-links.csv`.
+PostgreSQL access lives in `src/lib/postgres.ts`. It is the source for
+app-owned workflow data:
 
-## Local development
+- `b4bc_app.requirements`, tags, attachments, responses, comments, and
+  reactions
+- `b4bc_app.saved_partners` and `b4bc_app.partner_connections`
+- `b4bc_app.conversations`, participants, messages, and message attachments
+- `b4bc_app.member_profiles`, `b4bc_app.member_preferences`, and
+  `b4bc_app.notifications`
+
+These tables store `legacy_member_id` values that refer to
+`b4b_members.member_id` by convention. They do not declare foreign keys to
+MySQL because the member directory is in a separate database.
+
+## Environment
+
+Create `.env.local` from `.env.example` and fill in the real values:
+
 ```bash
 cp .env.example .env.local
-# Fill in NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+```
+
+Required server-only variables:
+
+```env
+LEGACY_MYSQL_HOST=
+LEGACY_MYSQL_PORT=3306
+LEGACY_MYSQL_USER=
+LEGACY_MYSQL_PASSWORD=
+LEGACY_MYSQL_DB=
+APP_DATABASE_URL=
+SESSION_SECRET=
+```
+
+Public variable:
+
+```env
+NEXT_PUBLIC_MEDIA_BASE_URL=https://b4bc.org/people/
+```
+
+Generate a session secret with:
+
+```bash
+openssl rand -base64 48
+```
+
+## Local Development
+
+```bash
 npm install
 npm run dev
 ```
 
-Open http://localhost:3000 and sign in with any auth user you've created.
+Open [http://localhost:3000](http://localhost:3000). Sign in with an email
+address or phone number that exists on an active `b4b_members` row.
 
-## Deploying to Vercel
-1. Import `suraj7026/b4bcwebapp` into Vercel.
-2. Add three environment variables to **Production + Preview + Development**:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-   - `NEXT_PUBLIC_MEDIA_BASE_URL` (default `https://b4bc.org/people/`)
-3. (Optional, server-only) `SUPABASE_SECRET_KEY` for any server actions or
-   API routes that need to bypass RLS. **Don't** prefix with `NEXT_PUBLIC_`.
-4. Deploy.
+## Postgres Migrations
 
-No backend host, no Postgres procurement, no CORS gymnastics. Supabase
-covers all three.
+Apply the app database schema:
 
-## Project layout
+```bash
+psql "$APP_DATABASE_URL" -f db/postgres/migrations/202606050001_app_backend_schema.sql
 ```
+
+Rollback the schema, if needed:
+
+```bash
+psql "$APP_DATABASE_URL" -f db/postgres/migrations/202606050001_app_backend_schema.down.sql
+```
+
+## Build
+
+```bash
+npm run build
+npm start
+```
+
+`next.config.ts` sets `output: "standalone"` and contains Windows/Plesk
+path-casing workarounds. `app.js` is the production startup file for
+Plesk/Phusion Passenger.
+
+## Project Layout
+
+```text
 src/
   app/
-    (app)/                 # Authed shell
+    (app)/                 # Authenticated app shell
       dashboard/
       directory/
         [id]/
-      favorites/
+      feed/
+      messages/
       profile/
-      privacy/
+      settings/
+    actions/
+      auth.ts              # Login/logout server actions
+      app-queries.ts       # Postgres workflow actions + MySQL member hydration
+      queries.ts           # Directory, profile, dashboard data actions
     login/
-    reset-password/
-    signup/
-    auth/
-      callback/
-      confirm/
+    global-error.tsx
     layout.tsx
-    page.tsx               # Redirects to /login or /directory
-    globals.css            # Tailwind tokens + design system
+    page.tsx               # Session-aware redirect
+    globals.css
   components/
-    layout/top-bar.tsx
+    auth/
     directory/
-      business-card.tsx
-      filters-panel.tsx
-      report-dialog.tsx
-      logo.tsx
-    ui/                    # Button, Input, Card, Chip, Icon
-    providers.tsx          # TanStack Query
+    layout/
+    ui/
+    providers.tsx          # TanStack Query provider
   lib/
-    auth.ts                # getSessionUser() server helper
-    media.ts               # resolveLogoUrl()
-    supabase-queries.ts    # typed queries used by the pages
+    auth.ts                # Current session user lookup
+    media.ts               # Media URL helper
+    mysql.ts               # MySQL pool and legacy SQL helpers
+    postgres.ts            # Postgres pool and app workflow SQL helper
+    session.ts             # JWT cookie signing/verification
     utils.ts
-  proxy.ts                 # Wraps utils/supabase/middleware.updateSession
-  types/database.ts        # Hand-written Database type for the JS client
-  utils/supabase/
-    server.ts              # createClient() for RSC / route handlers
-    client.ts              # createClient() for "use client"
-    middleware.ts          # session refresher
-
-supabase/
-  config.toml
-  migrations/
-    20260526120000_init.sql
-    20260526120100_rls.sql
+  proxy.ts                 # Protected route redirects
+  types/
+    database.ts            # App-facing TypeScript data shapes
 
 scripts/
-  migrate-from-legacy.ts
+  extract_legacy_mysql.py  # Legacy export helper
+
+db/
+  postgres/
+    migrations/            # App-owned Postgres schema migrations
+
+app.js                     # Plesk/Passenger startup file
+next.config.ts             # Next config and Plesk path fixes
 ```

@@ -2,6 +2,11 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import { TopBar } from "@/components/layout/top-bar";
 
+const EMPTY_ACTIVITY_COUNTS = {
+  unreadNotifications: 0,
+  unreadMessages: 0,
+};
+
 export default async function AppLayout({
   children,
 }: {
@@ -9,13 +14,13 @@ export default async function AppLayout({
 }) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
+
   return (
     <>
-      <TopBar user={user} />
-      <div className="flex-1 bg-surface">{children}</div>
-      <footer className="border-t border-outline-variant bg-surface py-4 text-center text-xs text-outline">
-        © {new Date().getFullYear()} B4BC Connect Business Directory.
-      </footer>
+      <TopBar user={user} activityCounts={EMPTY_ACTIVITY_COUNTS} />
+      <div className="flex-1 bg-background pb-20 lg:ml-[280px] lg:pb-0 lg:pt-16">
+        {children}
+      </div>
     </>
   );
 }

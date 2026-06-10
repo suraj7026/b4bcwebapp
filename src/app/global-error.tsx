@@ -1,6 +1,6 @@
 "use client";
 
-// Override Next.js 16's auto-generated /_global-error to dodge a framework bug:
+// Override Next.js's auto-generated /_global-error to dodge a build-time bug:
 //   Error [InvariantError]: Expected workStore to be initialized
 // during `next build` prerender. Providing a user file replaces the default
 // generator and the build completes.

@@ -1,0 +1,16 @@
+DROP TABLE IF EXISTS b4bc_app_network_activity_events;
+DROP TABLE IF EXISTS b4bc_app_notifications;
+DROP TABLE IF EXISTS b4bc_app_message_attachments;
+DROP TABLE IF EXISTS b4bc_app_conversation_participants;
+DROP TABLE IF EXISTS b4bc_app_messages;
+DROP TABLE IF EXISTS b4bc_app_conversations;
+DROP TABLE IF EXISTS b4bc_app_partner_connections;
+DROP TABLE IF EXISTS b4bc_app_saved_partners;
+DROP TABLE IF EXISTS b4bc_app_feed_reactions;
+DROP TABLE IF EXISTS b4bc_app_requirement_comments;
+DROP TABLE IF EXISTS b4bc_app_requirement_responses;
+DROP TABLE IF EXISTS b4bc_app_requirement_attachments;
+DROP TABLE IF EXISTS b4bc_app_requirement_tags;
+DROP TABLE IF EXISTS b4bc_app_requirements;
+DROP TABLE IF EXISTS b4bc_app_member_preferences;
+DROP TABLE IF EXISTS b4bc_app_member_profiles;

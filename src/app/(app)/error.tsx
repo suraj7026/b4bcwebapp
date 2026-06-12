@@ -34,7 +34,7 @@ export default function AppRouteError({
           <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-on-surface-variant">
             The app database is slow or unreachable right now. The directory is
             still available, but feed, messages, notifications, and settings
-            need the PostgreSQL service to respond.
+            need the app-owned MySQL tables to respond.
           </p>
           {error.digest ? (
             <p className="mt-3 text-xs text-outline">Error {error.digest}</p>

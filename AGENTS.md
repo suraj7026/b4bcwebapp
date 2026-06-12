@@ -3,9 +3,8 @@
 This repository is the current B4BC Connect implementation:
 
 - Next.js 16 App Router with React 19.
-- Direct legacy Hostinger/MySQL access through `mysql2/promise`.
-- App-owned PostgreSQL access through `pg` for feed, network, chat,
-  notifications, profile preferences, and requirement posts.
+- Direct Hostinger/MySQL access through `mysql2/promise` for legacy directory
+  reads and app-owned workflow tables.
 - Custom member login using email or phone lookup in `b4b_members`.
 - JWT session cookie named `b4bc_session`, signed with `SESSION_SECRET`.
 - TanStack Query client state and server actions for data reads.
@@ -22,14 +21,15 @@ that are present in this repository.
   composer, and searchable/filterable/paginated member listings.
 - `/dashboard` redirects to `/directory`.
 - `/directory/[id]` shows a full member/business profile.
-- `/feed` shows public requirement feed data from PostgreSQL and hydrates
+- `/feed` shows public requirement feed data from app-owned MySQL tables and hydrates
   member names from MySQL.
-- `/messages` shows member conversations from PostgreSQL and hydrates member
+- `/messages` shows member conversations from app-owned MySQL tables and hydrates member
   names from MySQL.
-- `/notifications` shows signed-in member notifications from PostgreSQL.
+- `/notifications` shows signed-in member notifications from app-owned MySQL
+  tables.
 - `/profile` shows the signed-in member record as read-only data.
-- `/settings` shows app-owned profile and notification settings from
-  PostgreSQL.
+- `/settings` shows app-owned profile and notification settings from app-owned
+  MySQL tables.
 
 Protected routes are enforced in `src/proxy.ts`.
 
@@ -49,11 +49,11 @@ Many legacy rows have missing `industry`, so `src/lib/mysql.ts` derives a
 synthetic industry id from `business_area` and `service_provided`. Preserve that
 behavior unless replacing it with a verified data cleanup.
 
-App-owned tables live in PostgreSQL under the `b4bc_app` schema. PostgreSQL
-tables store `legacy_member_id` values that refer to `b4b_members.member_id` by
-convention only; do not add foreign keys to MySQL data.
+App-owned tables live in the same MySQL database with a `b4bc_app_` prefix.
+They store `legacy_member_id` values that refer to `b4b_members.member_id` by
+convention only; do not add foreign keys to legacy `b4b_*` tables.
 
-PostgreSQL migrations live in `db/postgres/`.
+MySQL app migrations live in `db/mysql/`.
 
 ## Environment
 
@@ -64,7 +64,6 @@ Required server-side environment variables:
 - `LEGACY_MYSQL_USER`
 - `LEGACY_MYSQL_PASSWORD`
 - `LEGACY_MYSQL_DB`
-- `APP_DATABASE_URL`
 - `SESSION_SECRET`
 
 Public media URL:

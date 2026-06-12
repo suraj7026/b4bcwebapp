@@ -16,7 +16,6 @@
     "lucide-react": "^1.16.0",
     "mysql2": "^3.22.4",
     "next": "^16.2.7",
-    "pg": "^8.21.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "tailwind-merge": "^3.6.0",
@@ -25,7 +24,6 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
-    "@types/pg": "^8.20.0",
     "@types/react": "^19.2.16",
     "@types/react-dom": "^19.2.3",
     "dotenv": "^17.4.2",

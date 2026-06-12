@@ -10,9 +10,9 @@ This README describes the current implementation in this repository.
 ## Stack
 
 - **Framework**: Next.js 16 App Router, React 19
-- **Directory and auth data**: Legacy Hostinger/MySQL database via
-  `mysql2/promise`
-- **App workflow data**: PostgreSQL via `pg`
+- **Data**: Legacy Hostinger/MySQL database via `mysql2/promise`
+  for both read-only legacy directory data and app-owned `b4bc_app_*`
+  workflow tables
 - **Auth**: Custom email-or-phone member lookup plus signed JWT cookie
 - **Session**: HTTP-only `b4bc_session` cookie signed with `SESSION_SECRET`
 - **State**: TanStack Query v5
@@ -30,24 +30,22 @@ This README describes the current implementation in this repository.
     |-- proxy verifies b4bc_session
     |-- server actions read/write cookies and query data
     |-- MySQL reads member identity and directory data
-    |-- PostgreSQL reads/writes app workflow data
+    |-- MySQL reads/writes app-owned workflow data
     |
-    |--> [ Legacy MySQL ]
+    |--> [ MySQL ]
     |-- b4b_members
     |-- b4b_industry_segments
     |-- b4b_zones
     |-- b4b_chapters
-    |
-    |--> [ PostgreSQL: b4bc_app schema ]
-    |-- requirements / responses / comments / reactions
-    |-- saved partners / partner connections
-    |-- conversations / participants / messages
-    |-- member profiles / preferences / notifications
+    |-- b4bc_app_requirements / responses / comments / reactions
+    |-- b4bc_app_saved_partners / partner_connections
+    |-- b4bc_app_conversations / participants / messages
+    |-- b4bc_app_member_profiles / preferences / notifications
 ```
 
 There is no separate API server. The Next.js app queries MySQL from server-only
-code for member identity and directory records, and queries PostgreSQL from
-server-only code for feed, chat, network, notification, and requirement data.
+code for member identity, directory records, feed, chat, network,
+notification, and requirement data.
 
 ## Routes
 
@@ -59,9 +57,9 @@ server-only code for feed, chat, network, notification, and requirement data.
   filters.
 - `/dashboard` — redirects to `/directory` for old links.
 - `/directory/[id]` — full business profile and contact actions.
-- `/feed` — public requirements feed backed by PostgreSQL.
-- `/messages` — member messaging interface backed by PostgreSQL.
-- `/notifications` — member notification list backed by PostgreSQL.
+- `/feed` — public requirements feed backed by app-owned MySQL tables.
+- `/messages` — member messaging interface backed by app-owned MySQL tables.
+- `/notifications` — member notification list backed by app-owned MySQL tables.
 - `/profile` — read-only view of the signed-in member record.
 - `/settings` — app-owned profile settings and notification preferences.
 
@@ -82,8 +80,9 @@ this implementation.
 
 ## Data Access
 
-MySQL access lives in `src/lib/mysql.ts`. It remains the source for member
-identity, login, directory listings, industry segments, zones, and chapters.
+MySQL access lives in `src/lib/mysql.ts`. Legacy `b4b_*` tables remain the
+source for member identity, login, directory listings, industry segments, zones,
+and chapters.
 
 Required tables:
 
@@ -102,19 +101,20 @@ The legacy data often has a missing `b4b_members.industry` value, so the app
 derives an industry id from `business_area` and `service_provided`. That logic
 is centralized in `DERIVED_INDUSTRY_SQL` in `src/lib/mysql.ts`.
 
-PostgreSQL access lives in `src/lib/postgres.ts`. It is the source for
-app-owned workflow data:
+App-owned workflow tables also live in MySQL with the `b4bc_app_` prefix:
 
-- `b4bc_app.requirements`, tags, attachments, responses, comments, and
+- `b4bc_app_requirements`, tags, attachments, responses, comments, and
   reactions
-- `b4bc_app.saved_partners` and `b4bc_app.partner_connections`
-- `b4bc_app.conversations`, participants, messages, and message attachments
-- `b4bc_app.member_profiles`, `b4bc_app.member_preferences`, and
-  `b4bc_app.notifications`
+- `b4bc_app_saved_partners` and `b4bc_app_partner_connections`
+- `b4bc_app_conversations`, participants, messages, and message attachments
+- `b4bc_app_member_profiles`, `b4bc_app_member_preferences`, and
+  `b4bc_app_notifications`
+- `b4bc_app_network_activity_events`
 
 These tables store `legacy_member_id` values that refer to
 `b4b_members.member_id` by convention. They do not declare foreign keys to
-MySQL because the member directory is in a separate database.
+legacy `b4b_*` tables, keeping app-owned data separate from imported member
+data.
 
 ## Environment
 
@@ -132,7 +132,6 @@ LEGACY_MYSQL_PORT=3306
 LEGACY_MYSQL_USER=
 LEGACY_MYSQL_PASSWORD=
 LEGACY_MYSQL_DB=
-APP_DATABASE_URL=
 SESSION_SECRET=
 ```
 
@@ -158,18 +157,26 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000). Sign in with an email
 address or phone number that exists on an active `b4b_members` row.
 
-## Postgres Migrations
+## MySQL App Migrations
 
 Apply the app database schema:
 
 ```bash
-psql "$APP_DATABASE_URL" -f db/postgres/migrations/202606050001_app_backend_schema.sql
+MYSQL_PWD="$LEGACY_MYSQL_PASSWORD" mysql \
+  --host="$LEGACY_MYSQL_HOST" \
+  --port="$LEGACY_MYSQL_PORT" \
+  --user="$LEGACY_MYSQL_USER" \
+  "$LEGACY_MYSQL_DB" < db/mysql/migrations/202606120001_app_backend_schema.sql
 ```
 
 Rollback the schema, if needed:
 
 ```bash
-psql "$APP_DATABASE_URL" -f db/postgres/migrations/202606050001_app_backend_schema.down.sql
+MYSQL_PWD="$LEGACY_MYSQL_PASSWORD" mysql \
+  --host="$LEGACY_MYSQL_HOST" \
+  --port="$LEGACY_MYSQL_PORT" \
+  --user="$LEGACY_MYSQL_USER" \
+  "$LEGACY_MYSQL_DB" < db/mysql/migrations/202606120001_app_backend_schema.down.sql
 ```
 
 ## Build
@@ -198,7 +205,7 @@ src/
       settings/
     actions/
       auth.ts              # Login/logout server actions
-      app-queries.ts       # Postgres workflow actions + MySQL member hydration
+      app-queries.ts       # MySQL app workflow actions + member hydration
       queries.ts           # Directory, profile, dashboard data actions
     login/
     global-error.tsx
@@ -215,7 +222,6 @@ src/
     auth.ts                # Current session user lookup
     media.ts               # Media URL helper
     mysql.ts               # MySQL pool and legacy SQL helpers
-    postgres.ts            # Postgres pool and app workflow SQL helper
     session.ts             # JWT cookie signing/verification
     utils.ts
   proxy.ts                 # Protected route redirects
@@ -226,8 +232,8 @@ scripts/
   extract_legacy_mysql.py  # Legacy export helper
 
 db/
-  postgres/
-    migrations/            # App-owned Postgres schema migrations
+  mysql/
+    migrations/            # App-owned MySQL schema migrations
 
 app.js                     # Plesk/Passenger startup file
 next.config.ts             # Next config and Plesk path fixes

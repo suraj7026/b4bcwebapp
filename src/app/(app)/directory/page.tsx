@@ -5,6 +5,11 @@ import {
 } from "@/app/actions/app-queries";
 import { StitchIcon } from "@/components/directory/partner-cards";
 import { DashboardRequirementSection } from "@/app/(app)/directory/dashboard-requirement-section";
+import { getSessionUser } from "@/lib/auth";
+
+function firstName(displayName: string | null | undefined) {
+  return displayName?.trim().split(/\s+/)[0] || "Member";
+}
 
 function activityToneClass(tone: NetworkActivityItem["tone"]) {
   if (tone === "tertiary") {
@@ -45,7 +50,10 @@ function ActivityRow({ item }: { item: NetworkActivityItem }) {
 }
 
 export default async function DirectoryPage() {
-  const dashboard = await fetchDashboardHomeAction();
+  const [dashboard, user] = await Promise.all([
+    fetchDashboardHomeAction(),
+    getSessionUser(),
+  ]);
 
   return (
     <main className="min-h-screen bg-background">
@@ -53,7 +61,7 @@ export default async function DirectoryPage() {
         <section className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 className="text-[32px] font-bold leading-10 text-primary">
-              Good Morning, Alex
+              Good Morning, {firstName(user?.displayName)}
             </h1>
             <p className="text-[16px] leading-6 text-text-muted">
               Here&apos;s what&apos;s happening with your business network today.
